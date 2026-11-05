@@ -1,3 +1,6 @@
+unit_tests: # Run unit tests, type checks, lint and build on every push and pull request
+  enabled: true
+
 code_scanning: # Run CodeQL security checks
   enabled: true
   engine: CodeQL

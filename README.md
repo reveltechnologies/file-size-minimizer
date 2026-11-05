@@ -90,6 +90,7 @@ docs/              User guide: how to use the app and common questions
 
 When you push to GitHub, the workflows in `.github/workflows/` (switched on or off in [`config.yaml`](config.yaml)):
 
+- Run the **unit tests**, type checks, lint and build (`tests.yml`). A red ❌ next to a commit means one of them failed; click it to see which.
 - Run **CodeQL** security analysis.
 - Create or update a **GitHub Release** for each version in [`CHANGELOG.md`](CHANGELOG.md).
 - Keep the supported-versions table in [`SECURITY.md`](SECURITY.md) up to date.

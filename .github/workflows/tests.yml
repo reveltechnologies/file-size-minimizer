@@ -1,0 +1,83 @@
+name: Tests
+
+on:
+  push:
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'LICENSE*'
+  pull_request:
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'LICENSE*'
+  workflow_dispatch:
+
+# A newer push to the same branch makes the older run pointless.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  ACTIONS_FLAGS_RECORD_NODE_DEPRECATION: 'false'
+
+jobs:
+  config:
+    name: Check config.yaml
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.read.outputs.enabled }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: config.yaml
+          sparse-checkout-cone-mode: false
+
+      - name: Read unit_tests.enabled
+        id: read
+        run: |
+          python3 - << 'EOF' >> "$GITHUB_OUTPUT"
+          import os, re
+          enabled = True  # on unless config.yaml turns it off
+          if os.path.exists("config.yaml"):
+              with open("config.yaml", encoding="utf-8") as f:
+                  match = re.search(r'unit_tests:\s*(?:#[^\n]*)?\n\s+enabled:\s*(true|false)', f.read(), re.IGNORECASE)
+              if match:
+                  enabled = match.group(1).lower() == "true"
+          print(f"enabled={str(enabled).lower()}")
+          EOF
+
+  test:
+    name: Test, type-check, lint and build
+    needs: config
+    if: needs.config.outputs.enabled == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests (packages/core)
+        run: npm test
+
+      - name: Type-check packages/core
+        run: npm run typecheck
+
+      - name: Lint apps/web
+        run: npm run lint -w apps/web
+
+      - name: Type-check and build apps/web
+        run: npm run build

@@ -16,6 +16,13 @@ Add every change here. Pick the version type by how well the app works:
 The release workflow marks alpha, beta and rc versions as pre-releases on GitHub.
 -->
 
+## [0.4.1-beta.1] - 2026-11-05
+
+**Type:** Beta. Every feature works and has been tested in Chrome and Edge, but the app isn't public yet.
+
+### Added
+- A Tests workflow that runs the unit tests, type checks, lint and build on every push and pull request. It can be turned off with `unit_tests` in `config.yaml`.
+
 ## [0.4.0-beta.1] - 2026-10-29
 
 **Type:** Beta. Every feature works and has been tested in Chrome and Edge, but the app isn't public yet.
