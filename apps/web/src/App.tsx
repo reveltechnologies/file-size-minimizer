@@ -1,12 +1,9 @@
 import {
   calculateBitrate,
-  compareFileNames,
   DEFAULT_AUDIO_KBPS,
   DEFAULT_OPTIONS,
-  detectCategory,
   formatBytes,
   isJpegFile,
-  MAX_MERGE_PHOTOS,
   offersPngOutput,
   type CompressOptions,
   type FileCategory,
@@ -22,6 +19,7 @@ import { CARD, PRIMARY_BUTTON, SECONDARY_BUTTON } from './components/styles'
 import { TargetPicker } from './components/TargetPicker'
 import { VideoPlanNote } from './components/VideoPlanNote'
 import { BlurryVideoError, compress, type CompressResult, type ProgressStep } from './engines'
+import { pickFiles, type PickedFiles } from './lib/pickFiles'
 import { defaultTarget, targetBytes, type Target } from './lib/target'
 import { useTransparency } from './lib/useTransparency'
 import { useVideoInfo } from './lib/useVideoInfo'
@@ -40,28 +38,6 @@ const WORKING_TITLE: Record<FileCategory, string> = {
 
 /** Long enough to see the bar fill and "Done" tick before the receipt appears. */
 const DONE_PAUSE_MS = 700
-
-interface PickedFiles {
-  /** Several files only when combining photos into one PDF. */
-  files: File[]
-  category: FileCategory
-}
-
-/** Validates a pick; returns an error message or what to process. */
-function pickFiles(files: File[]): PickedFiles | string {
-  const empty = files.find((file) => file.size === 0)
-  if (empty) return `"${empty.name}" is empty.`
-
-  if (files.length === 1) {
-    const category = detectCategory(files[0].name, files[0].type)
-    return category ? { files, category } : `"${files[0].name}" isn't supported. Try a video, photo or PDF.`
-  }
-
-  if (files.length > MAX_MERGE_PHOTOS) return `Pick up to ${MAX_MERGE_PHOTOS} photos at a time.`
-  const notPhoto = files.find((file) => detectCategory(file.name, file.type) !== 'image')
-  if (notPhoto) return `To combine files into one PDF, pick only photos. "${notPhoto.name}" isn't a photo.`
-  return { files: [...files].sort((a, b) => compareFileNames(a.name, b.name)), category: 'pdf' }
-}
 
 function App() {
   const [picked, setPicked] = useState<PickedFiles | null>(null)

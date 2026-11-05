@@ -54,7 +54,7 @@ Then open the address it prints (usually http://localhost:5173).
 | `npm run dev` | Starts the app with live reload |
 | `npm run build` | Type-checks and builds the production site into `apps/web/dist` |
 | `npm run preview` | Serves the production build locally |
-| `npm test` | Runs the core unit tests (Vitest) |
+| `npm test` | Runs the unit tests for `packages/core` and `apps/web` (Vitest) |
 | `npm run typecheck` | Type-checks `packages/core` |
 | `npm run lint -w apps/web` | Lints the web app (oxlint) |
 

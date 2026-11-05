@@ -16,6 +16,16 @@ Add every change here. Pick the version type by how well the app works:
 The release workflow marks alpha, beta and rc versions as pre-releases on GitHub.
 -->
 
+## [0.4.2-beta.1] - 2026-11-05
+
+**Type:** Beta. Every feature works and has been tested in Chrome and Edge, but the app isn't public yet.
+
+### Added
+- Unit tests for the web app: file picking and validation, size limits (presets and custom sizes) and the progress bar rules (never goes backwards, room for retries, slows down near the end). `npm test` and the Tests workflow now run them alongside the core tests.
+
+### Changed
+- Updated Vitest from 5.0.5 to 5.1.0.
+
 ## [0.4.1-beta.1] - 2026-11-05
 
 **Type:** Beta. Every feature works and has been tested in Chrome and Edge, but the app isn't public yet.

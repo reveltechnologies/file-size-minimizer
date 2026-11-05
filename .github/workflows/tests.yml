@@ -70,7 +70,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Unit tests (packages/core)
+      - name: Unit tests (packages/core and apps/web)
         run: npm test
 
       - name: Type-check packages/core

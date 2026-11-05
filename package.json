@@ -9,7 +9,7 @@
     "dev": "npm run dev -w apps/web",
     "build": "npm run build -w apps/web",
     "preview": "npm run preview -w apps/web",
-    "test": "npm test -w packages/core",
+    "test": "npm test -w packages/core -w apps/web",
     "typecheck": "npm run typecheck -w packages/core"
   }
 }
