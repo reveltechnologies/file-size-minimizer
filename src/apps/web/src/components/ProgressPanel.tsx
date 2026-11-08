@@ -4,13 +4,12 @@ import { ProgressBar } from './ProgressBar'
 import { CARD, SECONDARY_BUTTON } from './styles'
 
 const STEPS: { step: ProgressStep; label: string }[] = [
-  { step: 'prepare', label: 'Preparing' },
-  { step: 'shrink', label: 'Shrinking' },
+  { step: 'prepare', label: 'Prepare' },
+  { step: 'shrink', label: 'Shrink' },
   { step: 'done', label: 'Done' },
 ]
 
 interface ProgressPanelProps {
-  /** e.g. "Shrinking your video…" */
   title: string
   step: ProgressStep
   ratio: number
@@ -25,9 +24,9 @@ export function ProgressPanel({ title, step, ratio, status, onCancel }: Progress
 
   return (
     <section className={`${CARD} my-auto flex flex-col gap-5 py-6`}>
-      <p className="text-center text-lg font-bold tracking-tight">{done ? 'All done!' : title}</p>
+      <p className="text-center text-base font-bold tracking-tight">{done ? 'Done' : title}</p>
 
-      <ProgressBar ratio={shown} label={done ? 'Your file is ready' : status || 'Starting…'} />
+      <ProgressBar ratio={shown} label={done ? 'Complete' : status || 'Working…'} />
 
       <ol className="flex items-center gap-1.5 text-xs font-medium">
         {STEPS.map(({ step: s, label }, i) => {
@@ -52,7 +51,22 @@ export function ProgressPanel({ title, step, ratio, status, onCancel }: Progress
                         : 'border border-[var(--app-border)]'
                   }`}
                 >
-                  {finished ? '✓' : i + 1}
+                  {finished ? (
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      className="size-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M20 6 9 17l-5-5" />
+                    </svg>
+                  ) : (
+                    i + 1
+                  )}
                 </span>
                 {label}
               </span>
@@ -67,9 +81,6 @@ export function ProgressPanel({ title, step, ratio, status, onCancel }: Progress
         })}
       </ol>
 
-      <p className="text-center text-xs text-slate-500 dark:text-slate-400">
-        🔒 Your file never leaves this phone. Keep the app open.
-      </p>
       {!done && (
         <button type="button" onClick={onCancel} className={SECONDARY_BUTTON}>
           Cancel

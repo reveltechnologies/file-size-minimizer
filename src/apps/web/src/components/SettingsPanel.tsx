@@ -1,11 +1,13 @@
 import { DEFAULT_OPTIONS } from '@revel/core'
+import { pickFixedDirectory } from '../lib/saveFile'
 import {
   DEFAULT_SETTINGS,
   THEMES,
   type AppSettings,
   type DefaultPhotoFormat,
+  type OutputLocationMode,
 } from '../lib/settingsStore'
-import { CARD, choiceClass, SECONDARY_BUTTON } from './styles'
+import { CARD, choiceClass, SECONDARY_BUTTON, SUBTLE_BOX } from './styles'
 
 const GITHUB_REPO_URL = 'https://github.com/reveltechnologies/file-size-minimizer'
 
@@ -16,10 +18,16 @@ interface SettingsPanelProps {
   onClearAllHistory: () => void
 }
 
-const PHOTO_FORMAT_CHOICES: { id: DefaultPhotoFormat; label: string; detail: string }[] = [
-  { id: 'auto', label: 'Auto', detail: 'PNG if transparent, else JPG' },
-  { id: 'jpeg', label: 'Always JPG', detail: 'Smallest file size' },
-  { id: 'png', label: 'Always PNG', detail: 'Lossless pixels' },
+const PHOTO_FORMAT_CHOICES: { id: DefaultPhotoFormat; label: string }[] = [
+  { id: 'auto', label: 'Auto' },
+  { id: 'jpeg', label: 'JPG' },
+  { id: 'png', label: 'PNG' },
+]
+
+const LOCATION_CHOICES: { id: OutputLocationMode; label: string }[] = [
+  { id: 'same', label: 'Same folder' },
+  { id: 'ask', label: 'Ask every time' },
+  { id: 'fixed', label: 'Fixed folder' },
 ]
 
 export function SettingsPanel({
@@ -28,7 +36,16 @@ export function SettingsPanel({
   storedHistoryCount,
   onClearAllHistory,
 }: SettingsPanelProps) {
-  const { theme, options, defaultPhotoFormat, rememberHistory } = settings
+  const {
+    theme,
+    options,
+    defaultPhotoFormat,
+    rememberHistory,
+    outputLocationMode,
+    fixedFolderName,
+    filePrefix,
+    fileSuffix,
+  } = settings
 
   function handleResetDefaults() {
     onChangeSettings({
@@ -37,17 +54,24 @@ export function SettingsPanel({
     })
   }
 
-  return (
-    <div className="flex flex-1 flex-col gap-3.5">
-      {/* Theme selection */}
-      <section className={`${CARD} flex flex-col gap-3`}>
-        <div>
-          <h2 className="text-sm font-bold tracking-tight">Appearance &amp; Theme</h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Saved automatically on your phone across restarts.
-          </p>
-        </div>
+  async function handlePickFolder() {
+    const pickedName = await pickFixedDirectory()
+    if (pickedName) {
+      onChangeSettings({
+        ...settings,
+        outputLocationMode: 'fixed',
+        fixedFolderName: pickedName,
+      })
+    }
+  }
 
+  return (
+    <div className="flex flex-1 flex-col gap-3">
+      {/* Theme selection */}
+      <section className={`${CARD} flex flex-col gap-2.5`}>
+        <h2 className="text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
+          Theme
+        </h2>
         <div className="grid grid-cols-2 gap-2">
           {THEMES.map((item) => {
             const active = theme === item.id
@@ -57,134 +81,206 @@ export function SettingsPanel({
                 type="button"
                 aria-pressed={active}
                 onClick={() => onChangeSettings({ ...settings, theme: item.id })}
-                className={choiceClass(active)}
+                className="flex min-h-11 items-center gap-2.5 rounded-2xl border px-3 py-2 text-left text-xs font-semibold transition active:scale-[0.98]"
+                style={
+                  active
+                    ? {
+                        borderColor: '#10b981',
+                        backgroundColor: '#059669',
+                        color: '#ffffff',
+                      }
+                    : {
+                        borderColor: 'var(--app-border)',
+                        backgroundColor: 'var(--app-subtle)',
+                      }
+                }
               >
-                <span className="flex items-center gap-2 font-semibold">
-                  <span
-                    aria-hidden="true"
-                    style={{ backgroundColor: item.swatch }}
-                    className="size-3.5 shrink-0 rounded-full border border-white/30"
-                  />
-                  <span className="truncate">{item.label}</span>
-                </span>
-                <span className="mt-0.5 block text-xs opacity-80">{item.detail}</span>
+                <span
+                  aria-hidden="true"
+                  style={{ backgroundColor: item.swatch }}
+                  className="size-3.5 shrink-0 rounded-full border border-white/30"
+                />
+                <span className="truncate">{item.label}</span>
               </button>
             )
           })}
         </div>
       </section>
 
-      {/* Recent files memory setting */}
+      {/* Output Folder & File Naming */}
       <section className={`${CARD} flex flex-col gap-3`}>
-        <div>
-          <h2 className="text-sm font-bold tracking-tight">Recent Files History</h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Keep your last 10 viewed and last 10 shrunk files on-device to re-download anytime.
-          </p>
+        <h2 className="text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
+          Output Folder
+        </h2>
+        <div className="grid grid-cols-3 gap-2">
+          {LOCATION_CHOICES.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              aria-pressed={outputLocationMode === item.id}
+              onClick={() => onChangeSettings({ ...settings, outputLocationMode: item.id })}
+              className={`${choiceClass(outputLocationMode === item.id)} flex min-h-11 items-center justify-center px-2 py-2 text-center text-xs font-semibold`}
+            >
+              {item.label}
+            </button>
+          ))}
         </div>
 
+        {outputLocationMode === 'fixed' && (
+          <div className={`${SUBTLE_BOX} flex items-center justify-between gap-2 px-3 py-2`}>
+            <div className="flex min-w-0 items-center gap-2 text-xs">
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                className="size-4 shrink-0 text-emerald-500"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+              </svg>
+              <input
+                type="text"
+                aria-label="Folder name"
+                value={fixedFolderName}
+                onChange={(e) =>
+                  onChangeSettings({ ...settings, fixedFolderName: e.target.value })
+                }
+                className="min-w-0 flex-1 bg-transparent font-medium outline-none"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => void handlePickFolder()}
+              className="shrink-0 rounded-xl bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white active:scale-95"
+            >
+              Browse
+            </button>
+          </div>
+        )}
+
+        <h2 className="pt-1 text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
+          File Naming
+        </h2>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="flex flex-col gap-1">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">Prefix</span>
+            <input
+              type="text"
+              placeholder="min_"
+              value={filePrefix}
+              onChange={(e) => onChangeSettings({ ...settings, filePrefix: e.target.value })}
+              className={`${SUBTLE_BOX} px-3 py-2 text-xs font-medium outline-none`}
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">Suffix</span>
+            <input
+              type="text"
+              placeholder="-fit"
+              value={fileSuffix}
+              onChange={(e) => onChangeSettings({ ...settings, fileSuffix: e.target.value })}
+              className={`${SUBTLE_BOX} px-3 py-2 text-xs font-medium outline-none`}
+            />
+          </label>
+        </div>
+        <p className="truncate font-mono text-[11px] text-slate-500 dark:text-slate-400">
+          {filePrefix}file{fileSuffix}.mp4
+        </p>
+      </section>
+
+      {/* Defaults & History */}
+      <section className={`${CARD} flex flex-col gap-2.5`}>
+        <h2 className="text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
+          Defaults
+        </h2>
         <SettingRow
-          label="Remember last 10 viewed & shrunk files"
-          detail="Stored locally on this phone so you can view or download them again"
+          label="Remove metadata"
+          checked={options.stripHiddenData}
+          onChange={(stripHiddenData) =>
+            onChangeSettings({ ...settings, options: { ...options, stripHiddenData } })
+          }
+        />
+        <SettingRow
+          label="Smart video optimize"
+          checked={options.smartOptimize}
+          onChange={(smartOptimize) =>
+            onChangeSettings({ ...settings, options: { ...options, smartOptimize } })
+          }
+        />
+        <SettingRow
+          label="Mute video audio"
+          checked={options.muteAudio}
+          onChange={(muteAudio) =>
+            onChangeSettings({ ...settings, options: { ...options, muteAudio } })
+          }
+        />
+        <SettingRow
+          label="Save last 10 files"
           checked={rememberHistory}
           onChange={(checked) => onChangeSettings({ ...settings, rememberHistory: checked })}
         />
 
-        {storedHistoryCount > 0 && (
-          <button type="button" onClick={onClearAllHistory} className={SECONDARY_BUTTON}>
-            Clear saved files ({storedHistoryCount})
+        <div className="grid grid-cols-3 gap-2 pt-1">
+          {PHOTO_FORMAT_CHOICES.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              aria-pressed={defaultPhotoFormat === item.id}
+              onClick={() => onChangeSettings({ ...settings, defaultPhotoFormat: item.id })}
+              className={`${choiceClass(defaultPhotoFormat === item.id)} flex min-h-10 items-center justify-center py-2 text-center text-xs font-semibold`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex gap-2 pt-1">
+          {storedHistoryCount > 0 && (
+            <button
+              type="button"
+              onClick={onClearAllHistory}
+              className={`${SECONDARY_BUTTON} py-2.5 text-xs`}
+            >
+              Clear history ({storedHistoryCount})
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleResetDefaults}
+            className={`${SECONDARY_BUTTON} py-2.5 text-xs`}
+          >
+            Reset
           </button>
-        )}
+        </div>
       </section>
 
-      {/* Default compression & privacy settings */}
-      <section className={`${CARD} flex flex-col gap-3.5`}>
-        <div>
-          <h2 className="text-sm font-bold tracking-tight">Default Shrink Settings</h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Applied automatically whenever you pick a file to shrink.
+      {/* Open Source & Local badge */}
+      <section className={`${CARD} flex items-center justify-between gap-3 text-xs`}>
+        <div className="min-w-0">
+          <p className="font-semibold">Open-Source · 100% Local</p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            No external data transfer · v0.5.0-beta.1
           </p>
         </div>
-
-        <div className="flex flex-col gap-2">
-          <SettingRow
-            label="Strip hidden data & GPS"
-            detail="Remove EXIF location, camera serials, author tags & PDF edit history"
-            checked={options.stripHiddenData}
-            onChange={(stripHiddenData) =>
-              onChangeSettings({ ...settings, options: { ...options, stripHiddenData } })
-            }
-          />
-          <SettingRow
-            label="Smart video optimization"
-            detail="Convert HDR → SDR, 60 → 30 FPS, and auto-scale resolution when needed"
-            checked={options.smartOptimize}
-            onChange={(smartOptimize) =>
-              onChangeSettings({ ...settings, options: { ...options, smartOptimize } })
-            }
-          />
-          <SettingRow
-            label="Mute video audio by default"
-            detail="Give 100% of the target file size budget to video sharpness"
-            checked={options.muteAudio}
-            onChange={(muteAudio) =>
-              onChangeSettings({ ...settings, options: { ...options, muteAudio } })
-            }
-          />
-        </div>
-
-        <fieldset>
-          <legend className="mb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
-            Default photo output
-          </legend>
-          <div className="grid grid-cols-3 gap-2">
-            {PHOTO_FORMAT_CHOICES.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                aria-pressed={defaultPhotoFormat === item.id}
-                onClick={() => onChangeSettings({ ...settings, defaultPhotoFormat: item.id })}
-                className={choiceClass(defaultPhotoFormat === item.id)}
-              >
-                <span className="block text-xs font-semibold">{item.label}</span>
-                <span className="mt-0.5 block text-[11px] leading-tight opacity-80">
-                  {item.detail}
-                </span>
-              </button>
-            ))}
-          </div>
-        </fieldset>
-
-        <button type="button" onClick={handleResetDefaults} className={SECONDARY_BUTTON}>
-          Restore default settings
-        </button>
-      </section>
-
-      {/* Open Source & 100% Local Privacy info */}
-      <section className={`${CARD} flex flex-col gap-2.5 text-xs text-slate-600 dark:text-slate-300`}>
-        <div className="flex items-center justify-between gap-2">
-          <span className="font-bold text-slate-900 dark:text-white">
-            Open-Source &amp; 100% Local
-          </span>
-          <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-emerald-500">
-            v0.5.0-beta.1
-          </span>
-        </div>
-        <p className="leading-relaxed">
-          🔒 This app is completely <strong>open-source</strong> and runs{' '}
-          <strong>100% locally on your device</strong>. No files, text, metadata, or analytics are
-          ever sent to any external server.
-        </p>
         <a
           href={GITHUB_REPO_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-0.5 flex items-center justify-between gap-2 rounded-2xl border border-[var(--app-border)] bg-[var(--app-subtle)] px-3.5 py-2.5 font-semibold text-emerald-600 transition active:scale-[0.99] dark:text-emerald-400"
+          aria-label="GitHub Repository"
+          title="GitHub"
+          className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-[var(--app-border)] bg-[var(--app-subtle)] text-emerald-500 active:scale-95"
         >
-          <span className="truncate">github.com/reveltechnologies/file-size-minimizer</span>
-          <span aria-hidden="true" className="shrink-0">
-            ↗
-          </span>
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            className="size-5"
+            fill="currentColor"
+          >
+            <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z" />
+          </svg>
         </a>
       </section>
     </div>
@@ -193,25 +289,19 @@ export function SettingsPanel({
 
 interface SettingRowProps {
   label: string
-  detail: string
   checked: boolean
   onChange: (checked: boolean) => void
 }
 
-function SettingRow({ label, detail, checked, onChange }: SettingRowProps) {
+function SettingRow({ label, checked, onChange }: SettingRowProps) {
   return (
-    <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-[var(--app-border)] bg-[var(--app-subtle)] px-3.5 py-3 transition active:scale-[0.99]">
-      <span className="min-w-0 flex-1">
-        <span className="block text-sm font-medium text-slate-900 dark:text-slate-100">
-          {label}
-        </span>
-        <span className="block text-xs text-slate-500 dark:text-slate-400">{detail}</span>
-      </span>
+    <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-[var(--app-border)] bg-[var(--app-subtle)] px-3.5 py-2.5 transition active:scale-[0.99]">
+      <span className="text-xs font-medium">{label}</span>
       <input
         type="checkbox"
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
-        className="size-5 shrink-0 accent-emerald-600"
+        className="size-4.5 shrink-0 accent-emerald-600"
       />
     </label>
   )

@@ -1,11 +1,5 @@
 import type { CompressOptions, FileCategory } from '@revel/core'
 
-const STRIP_DETAILS: Record<FileCategory, string> = {
-  video: 'GPS location, camera info, gyro/sensor tracks, thumbnails',
-  image: 'EXIF, GPS location, camera model and serial',
-  pdf: 'Author, software tags, edit history',
-}
-
 interface OptionTogglesProps {
   category: FileCategory
   options: CompressOptions
@@ -16,25 +10,25 @@ export function OptionToggles({ category, options, onChange }: OptionTogglesProp
   return (
     <fieldset className="flex flex-col gap-2">
       <legend className="mb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
-        Options &amp; Privacy
+        Options
       </legend>
       <Toggle
-        label="Strip hidden data & GPS"
-        detail={STRIP_DETAILS[category]}
+        label="Remove metadata"
+        detail="EXIF, GPS, author"
         checked={options.stripHiddenData}
         onChange={(stripHiddenData) => onChange({ ...options, stripHiddenData })}
       />
       {category === 'video' && (
         <>
           <Toggle
-            label="Smart visual optimization"
-            detail="HDR → SDR, 60 → 30 FPS, auto 1080p / 720p / 480p"
+            label="Smart optimize"
+            detail="Auto resolution & FPS"
             checked={options.smartOptimize}
             onChange={(smartOptimize) => onChange({ ...options, smartOptimize })}
           />
           <Toggle
             label="Mute audio"
-            detail="All the space goes to picture sharpness"
+            detail="Remove sound track"
             checked={options.muteAudio}
             onChange={(muteAudio) => onChange({ ...options, muteAudio })}
           />
@@ -53,7 +47,7 @@ interface ToggleProps {
 
 function Toggle({ label, detail, checked, onChange }: ToggleProps) {
   return (
-    <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-[var(--app-border)] bg-[var(--app-subtle)] px-3.5 py-3 transition active:scale-[0.99]">
+    <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-[var(--app-border)] bg-[var(--app-subtle)] px-3.5 py-2.5 transition active:scale-[0.99]">
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-medium">{label}</span>
         <span className="block text-xs text-slate-500 dark:text-slate-400">{detail}</span>

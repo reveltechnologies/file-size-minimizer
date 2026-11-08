@@ -2,10 +2,10 @@ import { formatBytes } from '@revel/core'
 import { useEffect, useMemo, useState } from 'react'
 import type { HistoryEntry } from '../lib/historyStore'
 import { downloadBlob } from '../lib/saveFile'
+import type { OutputLocationMode } from '../lib/settingsStore'
 import { RecentFilesCard } from './RecentFilesCard'
-import { CARD, SECONDARY_BUTTON, SUBTLE_BOX } from './styles'
+import { CARD, SUBTLE_BOX } from './styles'
 
-/** Max bytes read into text/hex preview so giant files never freeze a phone. */
 const MAX_TEXT_PREVIEW_BYTES = 1_500_000
 const MAX_HEX_PREVIEW_BYTES = 4_096
 
@@ -17,7 +17,7 @@ interface LoadedFileState {
   textContent: string
   truncated: boolean
   objectUrl: string | null
-  pdfInfo: { pageCount: number; title?: string; author?: string; creator?: string } | null
+  pdfInfo: { pageCount: number; title?: string; author?: string } | null
   hexDump: string
   loading: boolean
   error: string | null
@@ -25,6 +25,7 @@ interface LoadedFileState {
 
 interface FileViewerProps {
   recentViewed: HistoryEntry[]
+  outputLocationMode: OutputLocationMode
   onFileViewed: (file: File) => void
   onClearViewed: () => void
 }
@@ -95,9 +96,7 @@ function detectKind(file: File, sampleBytes: Uint8Array): ViewerKind {
   const ext = getExtension(file.name)
   const mime = file.type.toLowerCase()
 
-  if (ext === 'json' || mime === 'application/json' || mime.endsWith('+json')) {
-    return 'json'
-  }
+  if (ext === 'json' || mime === 'application/json' || mime.endsWith('+json')) return 'json'
   if (ext === 'csv' || ext === 'tsv' || mime === 'text/csv' || mime === 'text/tab-separated-values') {
     return 'csv'
   }
@@ -122,11 +121,8 @@ function detectKind(file: File, sampleBytes: Uint8Array): ViewerKind {
   if (mime.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac'].includes(ext)) {
     return 'audio'
   }
-  if (mime === 'application/pdf' || ext === 'pdf') {
-    return 'pdf'
-  }
+  if (mime === 'application/pdf' || ext === 'pdf') return 'pdf'
 
-  // Heuristic: if the first bytes contain no null bytes, treat unknown files as readable text.
   let nullCount = 0
   for (let i = 0; i < sampleBytes.length; i++) {
     if (sampleBytes[i] === 0) nullCount++
@@ -158,7 +154,12 @@ function parseDelimited(text: string, delimiter: string): string[][] {
     .map((line) => line.split(delimiter))
 }
 
-export function FileViewer({ recentViewed, onFileViewed, onClearViewed }: FileViewerProps) {
+export function FileViewer({
+  recentViewed,
+  outputLocationMode,
+  onFileViewed,
+  onClearViewed,
+}: FileViewerProps) {
   const [dragging, setDragging] = useState(false)
   const [state, setState] = useState<LoadedFileState | null>(null)
   const [wrapLines, setWrapLines] = useState(true)
@@ -171,25 +172,19 @@ export function FileViewer({ recentViewed, onFileViewed, onClearViewed }: FileVi
 
   useEffect(() => {
     return () => {
-      if (state?.objectUrl) {
-        URL.revokeObjectURL(state.objectUrl)
-      }
+      if (state?.objectUrl) URL.revokeObjectURL(state.objectUrl)
     }
   }, [state?.objectUrl])
 
   async function openFile(file: File, recordHistory = true) {
-    if (state?.objectUrl) {
-      URL.revokeObjectURL(state.objectUrl)
-    }
+    if (state?.objectUrl) URL.revokeObjectURL(state.objectUrl)
     setSearch('')
     setCopied(false)
     setCsvMode('table')
     setBinaryMode('text')
     setPrettyJson(true)
 
-    if (recordHistory) {
-      onFileViewed(file)
-    }
+    if (recordHistory) onFileViewed(file)
 
     setState({
       file,
@@ -234,10 +229,9 @@ export function FileViewer({ recentViewed, onFileViewed, onClearViewed }: FileVi
             pageCount: pdfDoc.getPageCount(),
             title: pdfDoc.getTitle(),
             author: pdfDoc.getAuthor(),
-            creator: pdfDoc.getCreator(),
           }
         } catch {
-          // Still allow viewing raw/embedded PDF if metadata parsing fails.
+          // Ignore PDF metadata read errors.
         }
       }
 
@@ -270,7 +264,7 @@ export function FileViewer({ recentViewed, onFileViewed, onClearViewed }: FileVi
         pdfInfo: null,
         hexDump: '',
         loading: false,
-        error: err instanceof Error ? err.message : 'Could not read this file.',
+        error: err instanceof Error ? err.message : 'Read error',
       })
     }
   }
@@ -289,7 +283,7 @@ export function FileViewer({ recentViewed, onFileViewed, onClearViewed }: FileVi
       try {
         content = JSON.stringify(JSON.parse(content), null, 2)
       } catch {
-        // Keep raw text if JSON is invalid or truncated.
+        // Keep raw text.
       }
     }
     if (search.trim()) {
@@ -312,7 +306,7 @@ export function FileViewer({ recentViewed, onFileViewed, onClearViewed }: FileVi
     try {
       await navigator.clipboard.writeText(displayedText)
       setCopied(true)
-      setTimeout(() => setCopied(false), 1800)
+      setTimeout(() => setCopied(false), 1500)
     } catch {
       // Ignore clipboard permission errors.
     }
@@ -363,22 +357,16 @@ export function FileViewer({ recentViewed, onFileViewed, onClearViewed }: FileVi
               <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
             </svg>
           </span>
-          <div className="space-y-1">
-            <span className="block text-lg font-bold tracking-tight">Tap to view any file</span>
-            <span className="block text-xs text-slate-500 dark:text-slate-400">
-              Open .txt, .json, .csv, .log, code, HEIC photos, PDFs or unknown files directly on
-              your phone
-            </span>
-          </div>
-
-          <span className="mt-1 inline-flex items-center rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-xs">
-            Open file to read
+          <span className="text-base font-bold tracking-tight">Open File</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">
+            TXT · JSON · CSV · Code · Media · PDF
           </span>
         </label>
 
         <RecentFilesCard
-          title="Recent Viewed Files"
+          title="Recent"
           entries={recentViewed}
+          outputLocationMode={outputLocationMode}
           onOpen={handleOpenFromHistory}
           onClear={onClearViewed}
         />
@@ -390,47 +378,73 @@ export function FileViewer({ recentViewed, onFileViewed, onClearViewed }: FileVi
     fontSize === 'xs' ? 'text-xs' : fontSize === 'sm' ? 'text-sm' : 'text-base'
 
   return (
-    <section className={`${CARD} flex flex-1 flex-col gap-3.5 overflow-hidden`}>
-      <div className={`${SUBTLE_BOX} flex items-center justify-between gap-2.5 px-3.5 py-2.5`}>
+    <section className={`${CARD} flex flex-1 flex-col gap-3 overflow-hidden`}>
+      <div className={`${SUBTLE_BOX} flex items-center justify-between gap-2 px-3 py-2`}>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{state.file.name}</p>
-          <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+          <p className="truncate text-xs font-semibold">{state.file.name}</p>
+          <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
             {(getExtension(state.file.name) || state.kind).toUpperCase()} ·{' '}
             {formatBytes(state.file.size)}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5">
           <button
             type="button"
-            onClick={() => downloadBlob(state.file, state.file.name)}
-            className="rounded-xl bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white active:scale-95"
+            onClick={() => void downloadBlob(state.file, state.file.name, outputLocationMode)}
+            aria-label="Download"
+            title="Download"
+            className="flex size-8 items-center justify-center rounded-xl bg-emerald-600 text-white active:scale-95"
           >
-            Download
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="size-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 4v12m0 0-4-4m4 4 4-4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+            </svg>
           </button>
           <button
             type="button"
             onClick={() => setState(null)}
-            className="text-xs font-semibold text-emerald-500 active:opacity-70"
+            aria-label="Close file"
+            title="Close"
+            className="flex size-8 items-center justify-center rounded-xl border border-[var(--app-border)] active:scale-95"
           >
-            Change
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="size-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
           </button>
         </div>
       </div>
 
       {state.loading ? (
-        <div className="my-auto py-12 text-center text-sm text-slate-500 dark:text-slate-400">
-          Reading file…
+        <div className="my-auto py-12 text-center text-xs text-slate-500 dark:text-slate-400">
+          Loading…
         </div>
       ) : state.error ? (
         <div className="rounded-2xl border border-red-300 bg-red-50 px-3.5 py-3 text-xs text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200">
           {state.error}
         </div>
       ) : state.kind === 'image' && state.objectUrl ? (
-        <div className={`${SUBTLE_BOX} flex flex-1 flex-col items-center justify-center gap-3 overflow-auto p-3`}>
+        <div className={`${SUBTLE_BOX} flex flex-1 flex-col items-center justify-center overflow-auto p-2`}>
           <img
             src={state.objectUrl}
             alt={state.file.name}
-            className="max-h-[55dvh] w-auto rounded-xl object-contain"
+            className="max-h-[58dvh] w-auto rounded-xl object-contain"
           />
         </div>
       ) : state.kind === 'video' && state.objectUrl ? (
@@ -439,7 +453,7 @@ export function FileViewer({ recentViewed, onFileViewed, onClearViewed }: FileVi
             src={state.objectUrl}
             controls
             playsInline
-            className="max-h-[55dvh] w-full rounded-xl"
+            className="max-h-[58dvh] w-full rounded-xl"
           />
         </div>
       ) : state.kind === 'audio' && state.objectUrl ? (
@@ -447,39 +461,24 @@ export function FileViewer({ recentViewed, onFileViewed, onClearViewed }: FileVi
           <audio src={state.objectUrl} controls className="w-full" />
         </div>
       ) : state.kind === 'pdf' ? (
-        <div className="flex flex-1 flex-col gap-3">
+        <div className="flex flex-1 flex-col gap-2.5">
           {state.pdfInfo && (
-            <div className={`${SUBTLE_BOX} grid grid-cols-2 gap-2 p-3 text-xs`}>
-              <div>
-                <span className="text-slate-500 dark:text-slate-400">Pages:</span>{' '}
-                <strong className="font-semibold">{state.pdfInfo.pageCount}</strong>
-              </div>
-              {state.pdfInfo.title && (
-                <div className="truncate">
-                  <span className="text-slate-500 dark:text-slate-400">Title:</span>{' '}
-                  <strong className="font-semibold">{state.pdfInfo.title}</strong>
-                </div>
-              )}
-              {state.pdfInfo.author && (
-                <div className="truncate">
-                  <span className="text-slate-500 dark:text-slate-400">Author:</span>{' '}
-                  <strong className="font-semibold">{state.pdfInfo.author}</strong>
-                </div>
-              )}
+            <div className={`${SUBTLE_BOX} flex items-center justify-between px-3 py-2 text-xs`}>
+              <span>{state.pdfInfo.pageCount} pages</span>
+              {state.pdfInfo.title && <span className="truncate">{state.pdfInfo.title}</span>}
             </div>
           )}
           {state.objectUrl && (
             <iframe
               src={state.objectUrl}
               title={state.file.name}
-              className="min-h-[46dvh] w-full flex-1 rounded-2xl border border-[var(--app-border)] bg-white"
+              className="min-h-[50dvh] w-full flex-1 rounded-2xl border border-[var(--app-border)] bg-white"
             />
           )}
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col gap-2.5">
-          {/* Viewer toolbar for text / csv / json / binary */}
-          <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex min-h-0 flex-1 flex-col gap-2">
+          <div className="flex items-center justify-between gap-1.5">
             <div className="flex items-center gap-1.5">
               {state.kind === 'csv' && (
                 <button
@@ -487,7 +486,7 @@ export function FileViewer({ recentViewed, onFileViewed, onClearViewed }: FileVi
                   onClick={() => setCsvMode(csvMode === 'table' ? 'raw' : 'table')}
                   className="rounded-xl border border-[var(--app-border)] bg-[var(--app-subtle)] px-2.5 py-1 text-xs font-medium"
                 >
-                  {csvMode === 'table' ? 'Raw text' : 'Table view'}
+                  {csvMode === 'table' ? 'Raw' : 'Table'}
                 </button>
               )}
               {state.kind === 'json' && (
@@ -496,7 +495,7 @@ export function FileViewer({ recentViewed, onFileViewed, onClearViewed }: FileVi
                   onClick={() => setPrettyJson(!prettyJson)}
                   className="rounded-xl border border-[var(--app-border)] bg-[var(--app-subtle)] px-2.5 py-1 text-xs font-medium"
                 >
-                  {prettyJson ? 'Minified' : 'Format JSON'}
+                  {prettyJson ? 'Min' : 'Pretty'}
                 </button>
               )}
               {state.kind === 'binary' && (
@@ -505,7 +504,7 @@ export function FileViewer({ recentViewed, onFileViewed, onClearViewed }: FileVi
                   onClick={() => setBinaryMode(binaryMode === 'text' ? 'hex' : 'text')}
                   className="rounded-xl border border-[var(--app-border)] bg-[var(--app-subtle)] px-2.5 py-1 text-xs font-medium"
                 >
-                  {binaryMode === 'text' ? 'Hex view' : 'Text view'}
+                  {binaryMode === 'text' ? 'Hex' : 'Text'}
                 </button>
               )}
               <button
@@ -513,7 +512,7 @@ export function FileViewer({ recentViewed, onFileViewed, onClearViewed }: FileVi
                 onClick={() => setWrapLines(!wrapLines)}
                 className="rounded-xl border border-[var(--app-border)] bg-[var(--app-subtle)] px-2.5 py-1 text-xs font-medium"
               >
-                {wrapLines ? 'No wrap' : 'Wrap'}
+                {wrapLines ? 'Unwrap' : 'Wrap'}
               </button>
               <button
                 type="button"
@@ -522,7 +521,7 @@ export function FileViewer({ recentViewed, onFileViewed, onClearViewed }: FileVi
                 }
                 className="rounded-xl border border-[var(--app-border)] bg-[var(--app-subtle)] px-2.5 py-1 text-xs font-medium"
               >
-                Text size
+                Aa
               </button>
             </div>
 
@@ -531,20 +530,23 @@ export function FileViewer({ recentViewed, onFileViewed, onClearViewed }: FileVi
               onClick={() => void handleCopy()}
               className="rounded-xl bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-500"
             >
-              {copied ? 'Copied!' : 'Copy'}
+              {copied ? 'Copied' : 'Copy'}
             </button>
           </div>
 
           <input
             type="search"
-            placeholder="Filter lines in file…"
+            placeholder="Search…"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             className="w-full rounded-xl border border-[var(--app-border)] bg-[var(--app-subtle)] px-3 py-2 text-xs"
           />
 
           {state.kind === 'csv' && csvMode === 'table' ? (
-            <div className="max-h-[48dvh] flex-1 overflow-auto rounded-2xl border border-[var(--app-border)]">
+            <div
+              data-no-swipe="true"
+              className="max-h-[52dvh] flex-1 overflow-auto rounded-2xl border border-[var(--app-border)]"
+            >
               <table className="w-full border-collapse text-left text-xs select-text">
                 <tbody>
                   {parseDelimited(
@@ -571,31 +573,25 @@ export function FileViewer({ recentViewed, onFileViewed, onClearViewed }: FileVi
             </div>
           ) : (
             <pre
-              className={`max-h-[48dvh] flex-1 overflow-auto rounded-2xl border border-[var(--app-border)] bg-[var(--app-subtle)] p-3 font-mono leading-relaxed select-text ${fontSizeClass} ${
+              data-no-swipe="true"
+              className={`max-h-[52dvh] flex-1 overflow-auto rounded-2xl border border-[var(--app-border)] bg-[var(--app-subtle)] p-3 font-mono leading-relaxed select-text ${fontSizeClass} ${
                 wrapLines ? 'break-words whitespace-pre-wrap' : 'whitespace-pre'
               }`}
             >
               {state.kind === 'binary' && binaryMode === 'hex'
                 ? state.hexDump
-                : displayedText || '(Empty file)'}
+                : displayedText || '(Empty)'}
             </pre>
           )}
 
           <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
             <span>
-              {lineCount.toLocaleString()} {lineCount === 1 ? 'line' : 'lines'} ·{' '}
-              {displayedText.length.toLocaleString()} chars
+              {lineCount.toLocaleString()} lines · {displayedText.length.toLocaleString()} chars
             </span>
-            {state.truncated && (
-              <span>Showing first {formatBytes(MAX_TEXT_PREVIEW_BYTES)}</span>
-            )}
+            {state.truncated && <span>{formatBytes(MAX_TEXT_PREVIEW_BYTES)} max</span>}
           </div>
         </div>
       )}
-
-      <button type="button" onClick={() => setState(null)} className={SECONDARY_BUTTON}>
-        Open another file
-      </button>
     </section>
   )
 }

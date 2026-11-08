@@ -2,21 +2,25 @@ import { formatBytes } from '@revel/core'
 import { useMemo } from 'react'
 import type { CompressResult } from '../engines'
 import { canShareFile, downloadBlob, shareBlob } from '../lib/saveFile'
+import type { OutputLocationMode } from '../lib/settingsStore'
 import { CARD, PRIMARY_BUTTON, SECONDARY_BUTTON } from './styles'
-
-/** Photos can come out in a different format than they went in, so say which. */
-const PHOTO_FORMAT: Record<string, string> = { 'image/jpeg': 'JPG', 'image/png': 'PNG' }
 
 interface SavingsReceiptProps {
   originalBytes: number
   maxBytes: number
   result: CompressResult
+  outputLocationMode: OutputLocationMode
   onReset: () => void
 }
 
-export function SavingsReceipt({ originalBytes, maxBytes, result, onReset }: SavingsReceiptProps) {
+export function SavingsReceipt({
+  originalBytes,
+  maxBytes,
+  result,
+  outputLocationMode,
+  onReset,
+}: SavingsReceiptProps) {
   const { blob, fileName } = result
-  // Rounded down so 99.8% never shows as "100% smaller".
   const savedPercent = Math.max(0, Math.floor((1 - blob.size / originalBytes) * 100))
   const fits = blob.size <= maxBytes
   const shareable = useMemo(() => canShareFile(blob, fileName), [blob, fileName])
@@ -24,40 +28,89 @@ export function SavingsReceipt({ originalBytes, maxBytes, result, onReset }: Sav
   return (
     <section className={`${CARD} my-auto flex flex-col items-center py-6 text-center`}>
       <span
-        className={`mb-3 flex size-14 items-center justify-center rounded-2xl text-2xl ${
+        className={`mb-3 flex size-14 items-center justify-center rounded-2xl ${
           fits
-            ? 'bg-green-500/15 text-green-600 dark:text-green-400'
-            : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+            ? 'bg-emerald-500/15 text-emerald-500'
+            : 'bg-amber-500/15 text-amber-500'
         }`}
       >
-        {fits ? '✓' : '⚠'}
+        {fits ? (
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            className="size-7"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
+        ) : (
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            className="size-7"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+          </svg>
+        )}
       </span>
-      <p className="text-xs font-semibold tracking-widest text-slate-500 uppercase dark:text-slate-400">
-        Savings receipt
-      </p>
-      <p className="mt-2 text-2xl font-bold tabular-nums">
-        {formatBytes(originalBytes)} →{' '}
-        <span className={fits ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}>
+
+      <div className="flex items-center gap-2 text-2xl font-bold tabular-nums">
+        <span>{formatBytes(originalBytes)}</span>
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          className="size-5 text-slate-400"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M5 12h14m-6-6 6 6-6 6" />
+        </svg>
+        <span className={fits ? 'text-emerald-500' : 'text-amber-500'}>
           {formatBytes(blob.size)}
         </span>
-      </p>
-      <p className="mt-1.5 text-sm font-medium">
-        {savedPercent}% smaller
-        {fits && ` · Fits under ${formatBytes(maxBytes)}`}
-      </p>
+      </div>
+
+      <p className="mt-1 text-sm font-semibold text-emerald-500">-{savedPercent}%</p>
+
       {!fits && (
-        <p className="mt-2 text-xs leading-relaxed text-amber-700 dark:text-amber-300">
-          Couldn't get under {formatBytes(maxBytes)}. This is the smallest we could make it.
+        <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
+          Smallest possible ({formatBytes(maxBytes)} limit)
         </p>
       )}
-      <p className="mt-1.5 w-full truncate text-xs text-slate-500 dark:text-slate-400">
-        {PHOTO_FORMAT[blob.type] && `Saved as ${PHOTO_FORMAT[blob.type]} · `}
-        {fileName}
-      </p>
+
+      <p className="mt-1 w-full truncate text-xs text-slate-500 dark:text-slate-400">{fileName}</p>
 
       <div className="mt-6 flex w-full flex-col gap-2.5">
-        <button type="button" onClick={() => downloadBlob(blob, fileName)} className={PRIMARY_BUTTON}>
-          Save to device
+        <button
+          type="button"
+          onClick={() => void downloadBlob(blob, fileName, outputLocationMode)}
+          className={`${PRIMARY_BUTTON} flex items-center justify-center gap-2`}
+        >
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            className="size-5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M12 4v12m0 0-4-4m4 4 4-4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+          </svg>
+          <span>Save</span>
         </button>
         {shareable && (
           <button
@@ -65,11 +118,11 @@ export function SavingsReceipt({ originalBytes, maxBytes, result, onReset }: Sav
             onClick={() => void shareBlob(blob, fileName).catch(console.error)}
             className={SECONDARY_BUTTON}
           >
-            Share…
+            Share
           </button>
         )}
         <button type="button" onClick={onReset} className={SECONDARY_BUTTON}>
-          Shrink another file
+          Done
         </button>
       </div>
     </section>

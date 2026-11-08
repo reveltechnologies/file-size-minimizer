@@ -37,7 +37,6 @@ export function DropZone({ onFiles }: DropZoneProps) {
         onChange={(event) => {
           const files = [...(event.target.files ?? [])]
           if (files.length > 0) onFiles(files)
-          // Allows picking the same file again after "Shrink another".
           event.target.value = ''
         }}
       />
@@ -55,18 +54,8 @@ export function DropZone({ onFiles }: DropZoneProps) {
           <path d="M12 16V4m0 0-4 4m4-4 4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
         </svg>
       </span>
-      <div className="space-y-1">
-        <span className="block text-lg font-bold tracking-tight">
-          Tap to pick a video, photo or PDF
-        </span>
-        <span className="block text-xs text-slate-500 dark:text-slate-400">
-          Select multiple photos to combine them into a single A4 PDF
-        </span>
-      </div>
-
-      <span className="mt-1 inline-flex items-center rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-xs">
-        Choose from device
-      </span>
+      <span className="text-base font-bold tracking-tight">Select File</span>
+      <span className="text-xs text-slate-500 dark:text-slate-400">Video · Photo · PDF</span>
     </label>
   )
 }

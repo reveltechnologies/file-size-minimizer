@@ -2,7 +2,6 @@ import {
   calculateBitrate,
   DEFAULT_AUDIO_KBPS,
   formatBytes,
-  isJpegFile,
   offersPngOutput,
   type CompressOptions,
   type FileCategory,
@@ -29,6 +28,7 @@ import {
 } from './lib/historyStore'
 import { pickFiles, type PickedFiles } from './lib/pickFiles'
 import {
+  applyNaming,
   loadSettings,
   saveSettings,
   THEMES,
@@ -40,10 +40,10 @@ import { useVideoInfo } from './lib/useVideoInfo'
 
 type Scene = 'viewer' | 'shrink' | 'settings'
 
-const SCENES: { id: Scene; label: string; subtitle: string }[] = [
-  { id: 'viewer', label: 'View File', subtitle: 'Read .txt, logs, CSV, JSON, media & more' },
-  { id: 'shrink', label: 'Shrink File', subtitle: '100% on-device · Private & offline-ready' },
-  { id: 'settings', label: 'Settings', subtitle: 'Themes, history & default options' },
+const SCENES: { id: Scene; label: string }[] = [
+  { id: 'viewer', label: 'View' },
+  { id: 'shrink', label: 'Shrink' },
+  { id: 'settings', label: 'Settings' },
 ]
 
 const CATEGORY_LABEL: Record<FileCategory, string> = {
@@ -53,13 +53,19 @@ const CATEGORY_LABEL: Record<FileCategory, string> = {
 }
 
 const WORKING_TITLE: Record<FileCategory, string> = {
-  video: 'Shrinking your video…',
-  image: 'Shrinking your photo…',
-  pdf: 'Shrinking your PDF…',
+  video: 'Shrinking video…',
+  image: 'Shrinking photo…',
+  pdf: 'Shrinking PDF…',
 }
 
-/** Long enough to see the bar fill and "Done" tick before the receipt appears. */
 const DONE_PAUSE_MS = 700
+
+function isInteractiveElement(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false
+  return Boolean(
+    target.closest('input, select, textarea, a, [data-no-swipe="true"]'),
+  )
+}
 
 function App() {
   const [scene, setScene] = useState<Scene>('shrink')
@@ -73,26 +79,35 @@ function App() {
   const [result, setResult] = useState<CompressResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [allowBlurry, setAllowBlurry] = useState(false)
-  /** The engine found the video would be blurry, which the browser couldn't tell in advance. */
   const [offerBlurry, setOfferBlurry] = useState(false)
-  /** The user's pick; until then the format follows settings or whether the image is see-through. */
   const [formatOverride, setFormatOverride] = useState<ImageFormat | null>(null)
   const [viewedHistory, setViewedHistory] = useState<HistoryEntry[]>([])
   const [shrunkHistory, setShrunkHistory] = useState<HistoryEntry[]>([])
   const abortRef = useRef<AbortController | null>(null)
   const barTrackRef = useRef<HTMLDivElement | null>(null)
+  const mainRef = useRef<HTMLElement | null>(null)
   const draggingBarRef = useRef(false)
+  const gestureRef = useRef<{
+    startX: number
+    startY: number
+    startScrollTop: number
+    active: boolean
+    axis: 'none' | 'x' | 'y'
+  }>({
+    startX: 0,
+    startY: 0,
+    startScrollTop: 0,
+    active: false,
+    axis: 'none',
+  })
 
   useEffect(() => {
     const orientation = screen.orientation as ScreenOrientation & {
       lock?: (mode: string) => Promise<void>
     }
-    orientation?.lock?.('portrait')?.catch(() => {
-      // Orientation lock is enforced by the manifest/TWA or CSS overlay when unsupported in browser tabs.
-    })
+    orientation?.lock?.('portrait')?.catch(() => {})
   }, [])
 
-  // Apply theme & persist settings across app restarts.
   useEffect(() => {
     const themeMeta = THEMES.find((t) => t.id === settings.theme) ?? THEMES[0]
     document.documentElement.dataset.theme = themeMeta.id
@@ -100,7 +115,6 @@ function App() {
     saveSettings(settings)
   }, [settings])
 
-  // Load saved file history on startup.
   useEffect(() => {
     if (!settings.rememberHistory) return
     void listHistory('viewed').then(setViewedHistory)
@@ -135,7 +149,6 @@ function App() {
   const canShrink =
     maxBytes !== null &&
     (!videoPlan || (videoPlan.possible && (videoPlan.feasible || allowBlurry))) &&
-    // Wait for the transparency check, or the default format could still flip.
     (!pngOffered || settings.defaultPhotoFormat !== 'auto' || transparent !== null)
 
   function handleChangeSettings(next: AppSettings) {
@@ -186,7 +199,7 @@ function App() {
     setStep('prepare')
     setProgress(0)
     try {
-      const done = await compress({
+      const rawDone = await compress({
         ...picked,
         maxBytes,
         options,
@@ -197,6 +210,17 @@ function App() {
         onStatus: setStatus,
         signal: controller.signal,
       })
+      const sourceBaseName = isMerge ? 'photos.pdf' : picked.files[0].name
+      const finalFileName = applyNaming(
+        sourceBaseName,
+        rawDone.fileName,
+        settings.filePrefix,
+        settings.fileSuffix,
+      )
+      const done: CompressResult = {
+        ...rawDone,
+        fileName: finalFileName,
+      }
       if (settings.rememberHistory) {
         const updated = await addHistoryEntry({
           bucket: 'shrunk',
@@ -213,7 +237,7 @@ function App() {
       setResult(done)
     } catch (err) {
       if (!controller.signal.aborted) {
-        setError(err instanceof Error ? err.message : 'Something went wrong while shrinking.')
+        setError(err instanceof Error ? err.message : 'Shrink failed.')
         setOfferBlurry(err instanceof BlurryVideoError)
       }
     } finally {
@@ -239,11 +263,11 @@ function App() {
   }
 
   return (
-    <div className="min-h-dvh bg-[var(--app-outer)] text-slate-900 dark:text-slate-100">
+    <div className="h-dvh overflow-hidden bg-[var(--app-outer)] text-slate-900 dark:text-slate-100">
       {/* Portrait-only lock overlay when a physical phone is rotated horizontally */}
       <div
         aria-hidden="true"
-        className="portrait-lock-overlay fixed inset-0 z-50 hidden flex-col items-center justify-center gap-3 bg-black px-6 text-center text-white"
+        className="portrait-lock-overlay fixed inset-0 z-50 hidden flex-col items-center justify-center gap-2 bg-black px-6 text-center text-white"
       >
         <svg
           viewBox="0 0 24 24"
@@ -257,42 +281,92 @@ function App() {
           <rect x="6" y="2" width="12" height="20" rx="2" />
           <path d="M12 18h.01" />
         </svg>
-        <p className="text-lg font-bold">Portrait Mode Only</p>
-        <p className="max-w-xs text-xs text-slate-400">
-          Please rotate your phone upright. This app is locked to vertical portrait orientation.
-        </p>
+        <p className="text-base font-bold">Portrait Only</p>
       </div>
 
       {/* Vertical phone shell constrained for every phone screen */}
-      <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-[var(--app-shell)] shadow-xl">
-        <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-[var(--app-border)] bg-[var(--app-shell)]/90 px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-3 backdrop-blur-md">
+      <div className="mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-[var(--app-shell)] shadow-xl">
+        <header className="z-10 flex shrink-0 items-center justify-between gap-3 border-b border-[var(--app-border)] bg-[var(--app-shell)] px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-2.5">
           <div className="flex min-w-0 items-center gap-2.5">
-            <img src="/logo.png" alt="" className="size-9 shrink-0 object-contain" />
-            <div className="min-w-0">
-              <h1 className="truncate text-base font-bold tracking-tight">
-                {activeSceneMeta.label}
-              </h1>
-              <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
-                {activeSceneMeta.subtitle}
-              </p>
-            </div>
+            <img src="/logo.png" alt="" className="size-8 shrink-0 object-contain" />
+            <h1 className="truncate text-base font-bold tracking-tight">
+              {activeSceneMeta.label}
+            </h1>
           </div>
 
           {scene === 'shrink' && picked && progress === null && (
             <button
               type="button"
               onClick={reset}
-              className="shrink-0 rounded-full border border-[var(--app-border)] bg-[var(--app-subtle)] px-3 py-1.5 text-xs font-semibold active:scale-95"
+              aria-label="Reset"
+              title="Reset"
+              className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-[var(--app-border)] bg-[var(--app-subtle)] active:scale-95"
             >
-              Start over
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                className="size-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
             </button>
           )}
         </header>
 
-        <main className="flex flex-1 flex-col gap-3.5 px-4 pt-3.5 pb-2">
+        <main
+          ref={mainRef}
+          onPointerDown={(event) => {
+            if (isInteractiveElement(event.target)) return
+            gestureRef.current = {
+              startX: event.clientX,
+              startY: event.clientY,
+              startScrollTop: mainRef.current?.scrollTop ?? 0,
+              active: true,
+              axis: 'none',
+            }
+          }}
+          onPointerMove={(event) => {
+            const g = gestureRef.current
+            if (!g.active) return
+            const dx = event.clientX - g.startX
+            const dy = event.clientY - g.startY
+            if (g.axis === 'none') {
+              if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+                g.axis = Math.abs(dx) > Math.abs(dy) * 1.25 ? 'x' : 'y'
+              }
+            }
+            if (g.axis === 'y' && mainRef.current && event.pointerType === 'mouse') {
+              mainRef.current.scrollTop = g.startScrollTop - dy
+            }
+          }}
+          onPointerUp={(event) => {
+            const g = gestureRef.current
+            if (!g.active) return
+            g.active = false
+            const dx = event.clientX - g.startX
+            const dy = event.clientY - g.startY
+            if (g.axis === 'x' && Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.25) {
+              if (dx < 0 && sceneIndex < SCENES.length - 1) {
+                setScene(SCENES[sceneIndex + 1].id)
+              } else if (dx > 0 && sceneIndex > 0) {
+                setScene(SCENES[sceneIndex - 1].id)
+              }
+            }
+          }}
+          onPointerCancel={() => {
+            gestureRef.current.active = false
+          }}
+          className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-3"
+        >
           {scene === 'viewer' ? (
             <FileViewer
               recentViewed={settings.rememberHistory ? viewedHistory : []}
+              outputLocationMode={settings.outputLocationMode}
               onFileViewed={handleFileViewed}
               onClearViewed={() => {
                 setViewedHistory([])
@@ -315,7 +389,7 @@ function App() {
               {error && (
                 <div
                   role="alert"
-                  className="flex flex-col gap-2.5 rounded-2xl border border-red-300 bg-red-50 px-3.5 py-3 text-xs leading-relaxed text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200"
+                  className="flex flex-col gap-2 rounded-2xl border border-red-300 bg-red-50 px-3.5 py-2.5 text-xs text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200"
                 >
                   <p>{error}</p>
                   {offerBlurry && picked && progress === null && (
@@ -324,7 +398,7 @@ function App() {
                       onClick={() => void handleShrink(true)}
                       className={SECONDARY_BUTTON}
                     >
-                      Shrink anyway (blurry)
+                      Shrink anyway
                     </button>
                   )}
                 </div>
@@ -335,26 +409,27 @@ function App() {
                   originalBytes={totalBytes}
                   maxBytes={maxBytes}
                   result={result}
+                  outputLocationMode={settings.outputLocationMode}
                   onReset={reset}
                 />
               ) : picked && progress !== null ? (
                 <ProgressPanel
-                  title={isMerge ? 'Making your PDF…' : WORKING_TITLE[picked.category]}
+                  title={isMerge ? 'Building PDF…' : WORKING_TITLE[picked.category]}
                   step={step}
                   ratio={progress}
                   status={status}
                   onCancel={() => abortRef.current?.abort()}
                 />
               ) : picked ? (
-                <div className="flex flex-1 flex-col justify-between gap-3.5">
-                  <section className={`${CARD} flex flex-col gap-4`}>
+                <div className="flex flex-1 flex-col justify-between gap-3">
+                  <section className={`${CARD} flex flex-col gap-3.5`}>
                     <div className="flex flex-col gap-2">
-                      <div className={`${SUBTLE_BOX} flex items-center justify-between gap-3 px-3.5 py-2.5`}>
+                      <div className={`${SUBTLE_BOX} flex items-center justify-between gap-2 px-3 py-2`}>
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold">
-                            {isMerge ? `${picked.files.length} photos → 1 PDF` : picked.files[0].name}
+                          <p className="truncate text-xs font-semibold">
+                            {isMerge ? `${picked.files.length} photos → PDF` : picked.files[0].name}
                           </p>
-                          <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                          <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
                             {isMerge ? 'Photos' : CATEGORY_LABEL[picked.category]} ·{' '}
                             {formatBytes(totalBytes)}
                           </p>
@@ -362,45 +437,43 @@ function App() {
                         <button
                           type="button"
                           onClick={reset}
-                          className="shrink-0 text-xs font-semibold text-emerald-500 active:opacity-70"
+                          aria-label="Change file"
+                          className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-[var(--app-border)] active:scale-95"
                         >
-                          Change
+                          <svg
+                            aria-hidden="true"
+                            viewBox="0 0 24 24"
+                            className="size-3.5"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M18 6 6 18M6 6l12 12" />
+                          </svg>
                         </button>
                       </div>
                       {isMerge && (
-                        <div className="text-xs text-slate-600 dark:text-slate-400">
-                          <p>Pages in this order (rename files to change it):</p>
-                          <ol className="mt-1.5 max-h-32 list-inside list-decimal overflow-y-auto rounded-xl border border-[var(--app-border)] px-3 py-2">
-                            {picked.files.map((file, i) => (
-                              <li key={i} className="truncate py-0.5">
-                                {file.name}
-                              </li>
-                            ))}
-                          </ol>
-                        </div>
+                        <ol className="max-h-28 list-inside list-decimal overflow-y-auto rounded-xl border border-[var(--app-border)] px-3 py-1.5 text-xs text-slate-500 dark:text-slate-400">
+                          {picked.files.map((file, i) => (
+                            <li key={i} className="truncate py-0.5">
+                              {file.name}
+                            </li>
+                          ))}
+                        </ol>
                       )}
                     </div>
 
                     <TargetPicker category={picked.category} target={target} onChange={setTarget} />
-                    {pngOffered ? (
+                    {pngOffered && (
                       <ImageFormatPicker
                         format={imageFormat}
                         transparent={transparent}
                         onChange={setFormatOverride}
                       />
-                    ) : (
-                      photo &&
-                      !isJpegFile(photo.name, photo.type) && (
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          Will be saved as JPG, which works everywhere.
-                        </p>
-                      )
                     )}
-                    {isMerge ? (
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        GPS location and camera data are always removed when combining photos.
-                      </p>
-                    ) : (
+                    {!isMerge && (
                       <OptionToggles
                         category={picked.category}
                         options={options}
@@ -418,12 +491,6 @@ function App() {
                         onAllowBlurryChange={setAllowBlurry}
                       />
                     )}
-                    {!isMerge && maxBytes !== null && totalBytes <= maxBytes && (
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Already under {formatBytes(maxBytes)}. Shrinking will still strip hidden
-                        data.
-                      </p>
-                    )}
                   </section>
 
                   <button
@@ -433,17 +500,18 @@ function App() {
                     className={PRIMARY_BUTTON}
                   >
                     {maxBytes === null
-                      ? 'Enter a size limit'
-                      : `${isMerge ? 'Combine' : 'Shrink'} under ${formatBytes(maxBytes)}`}
+                      ? 'Set limit'
+                      : `${isMerge ? 'Combine' : 'Shrink'} < ${formatBytes(maxBytes)}`}
                   </button>
                 </div>
               ) : (
-                <div className="flex flex-1 flex-col gap-3.5">
+                <div className="flex flex-1 flex-col gap-3">
                   <DropZone onFiles={handleFiles} />
                   {settings.rememberHistory && (
                     <RecentFilesCard
-                      title="Recent Shrunk Files"
+                      title="Recent"
                       entries={shrunkHistory}
+                      outputLocationMode={settings.outputLocationMode}
                       onClear={() => {
                         setShrunkHistory([])
                         void clearHistory('shrunk')
@@ -456,10 +524,10 @@ function App() {
           )}
         </main>
 
-        {/* Bottom slide/scroll navigation bar: Left = View File, Center = Shrink File, Right = Settings */}
+        {/* Bottom slide/scroll navigation bar: View | Shrink | Settings */}
         <nav
           aria-label="App scenes"
-          className="sticky bottom-0 z-10 border-t border-[var(--app-border)] bg-[var(--app-shell)]/95 px-4 pt-2 pb-[max(env(safe-area-inset-bottom),0.75rem)] backdrop-blur-md"
+          className="z-10 shrink-0 border-t border-[var(--app-border)] bg-[var(--app-shell)] px-4 pt-2 pb-[max(env(safe-area-inset-bottom),0.75rem)]"
         >
           <div
             ref={barTrackRef}
@@ -480,7 +548,6 @@ function App() {
             }}
             className="relative grid touch-none grid-cols-3 rounded-2xl border border-[var(--app-border)] bg-[var(--app-card)] p-1 select-none"
           >
-            {/* Sliding active pill */}
             <span
               aria-hidden="true"
               style={{ transform: `translateX(${sceneIndex * 100}%)` }}

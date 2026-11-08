@@ -20,13 +20,11 @@ export function VideoPlanNote({
   onAllowBlurryChange,
 }: VideoPlanNoteProps) {
   const duration = formatDuration(info.durationSec)
-  const tip = plan.audioKbps > 0 ? 'Mute audio or a bigger target' : 'A bigger target'
 
   if (!plan.possible) {
     return (
       <p className={WARNING}>
-        A {duration} video can't fit under {formatBytes(maxBytes)}, even blurry. {tip} will make it
-        fit.
+        {duration} is too long for {formatBytes(maxBytes)}. Increase target size.
       </p>
     )
   }
@@ -34,21 +32,18 @@ export function VideoPlanNote({
   const size = smartOptimize ? pickOutputSize(plan.videoKbps, info) : info
   if (!plan.feasible) {
     return (
-      <div className={`${WARNING} flex flex-col gap-2.5`}>
+      <div className={`${WARNING} flex flex-col gap-2`}>
         <p>
-          ⚠ A {duration} video will look <strong>very blurry</strong> under {formatBytes(maxBytes)}:
-          only {plan.videoKbps} kbps for the picture, at {size.width}×{size.height}. {tip} gives a
-          sharper result.
-          {!smartOptimize && ' Turning on Smart visual optimization also helps it fit.'}
+          Low quality ({plan.videoKbps} kbps · {size.width}×{size.height}).
         </p>
-        <label className="flex cursor-pointer items-center gap-2.5 pt-0.5 font-medium">
+        <label className="flex cursor-pointer items-center gap-2 font-medium">
           <input
             type="checkbox"
             checked={allowBlurry}
             onChange={(event) => onAllowBlurryChange(event.target.checked)}
             className="size-4 shrink-0 accent-amber-600"
           />
-          <span>Shrink anyway, I'm OK with a blurry video</span>
+          <span>Allow low quality</span>
         </label>
       </div>
     )
@@ -56,13 +51,11 @@ export function VideoPlanNote({
 
   return (
     <p className="text-xs text-slate-500 dark:text-slate-400">
-      Plan: {duration} at {plan.videoKbps} kbps video
-      {plan.audioKbps > 0 ? ` + ${plan.audioKbps} kbps audio` : ', no audio'} · {size.width}×{size.height}
+      {duration} · {plan.videoKbps} kbps · {size.width}×{size.height}
     </p>
   )
 }
 
-/** 75.4 → "1:15" */
 function formatDuration(seconds: number): string {
   const total = Math.round(seconds)
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`

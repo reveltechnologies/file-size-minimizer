@@ -1,16 +1,24 @@
 import { formatBytes } from '@revel/core'
 import type { HistoryEntry } from '../lib/historyStore'
 import { downloadBlob } from '../lib/saveFile'
+import type { OutputLocationMode } from '../lib/settingsStore'
 import { CARD, SUBTLE_BOX } from './styles'
 
 interface RecentFilesCardProps {
   title: string
   entries: HistoryEntry[]
+  outputLocationMode: OutputLocationMode
   onOpen?: (entry: HistoryEntry) => void
   onClear: () => void
 }
 
-export function RecentFilesCard({ title, entries, onOpen, onClear }: RecentFilesCardProps) {
+export function RecentFilesCard({
+  title,
+  entries,
+  outputLocationMode,
+  onOpen,
+  onClear,
+}: RecentFilesCardProps) {
   if (entries.length === 0) return null
 
   return (
@@ -22,13 +30,26 @@ export function RecentFilesCard({ title, entries, onOpen, onClear }: RecentFiles
         <button
           type="button"
           onClick={onClear}
-          className="text-xs font-semibold text-slate-500 active:opacity-70 dark:text-slate-400"
+          aria-label="Clear history"
+          title="Clear"
+          className="rounded-lg p-1 text-slate-500 active:opacity-70 dark:text-slate-400"
         >
-          Clear
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            className="size-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14" />
+          </svg>
         </button>
       </div>
 
-      <ul className="flex max-h-56 flex-col gap-2 overflow-y-auto pr-0.5">
+      <ul className="flex max-h-52 flex-col gap-2 overflow-y-auto">
         {entries.map((item) => {
           const savedPct =
             item.originalSize && item.originalSize > 0
@@ -38,15 +59,13 @@ export function RecentFilesCard({ title, entries, onOpen, onClear }: RecentFiles
           return (
             <li
               key={item.id}
-              className={`${SUBTLE_BOX} flex items-center justify-between gap-2.5 px-3 py-2`}
+              className={`${SUBTLE_BOX} flex items-center justify-between gap-2 px-3 py-2`}
             >
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs font-semibold">{item.fileName}</p>
                 <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
-                  {item.originalSize
-                    ? `${formatBytes(item.originalSize)} → ${formatBytes(item.size)}`
-                    : formatBytes(item.size)}
-                  {savedPct !== null && ` (${savedPct}% smaller)`}
+                  {formatBytes(item.size)}
+                  {savedPct !== null && ` (-${savedPct}%)`}
                 </p>
               </div>
 
@@ -55,17 +74,44 @@ export function RecentFilesCard({ title, entries, onOpen, onClear }: RecentFiles
                   <button
                     type="button"
                     onClick={() => onOpen(item)}
-                    className="rounded-xl border border-[var(--app-border)] px-2.5 py-1.5 text-xs font-semibold active:scale-95"
+                    aria-label={`View ${item.fileName}`}
+                    title="View"
+                    className="flex size-8 items-center justify-center rounded-xl border border-[var(--app-border)] active:scale-95"
                   >
-                    View
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      className="size-4"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
                   </button>
                 )}
                 <button
                   type="button"
-                  onClick={() => downloadBlob(item.blob, item.fileName)}
-                  className="rounded-xl bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white active:scale-95"
+                  onClick={() => void downloadBlob(item.blob, item.fileName, outputLocationMode)}
+                  aria-label={`Download ${item.fileName}`}
+                  title="Download"
+                  className="flex size-8 items-center justify-center rounded-xl bg-emerald-600 text-white active:scale-95"
                 >
-                  Download
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    className="size-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M12 4v12m0 0-4-4m4 4 4-4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+                  </svg>
                 </button>
               </div>
             </li>
@@ -75,4 +121,3 @@ export function RecentFilesCard({ title, entries, onOpen, onClear }: RecentFiles
     </section>
   )
 }
-
