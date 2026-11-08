@@ -1,14 +1,59 @@
 @import "tailwindcss";
 
-/* Native controls (select, number input, checkbox) follow the OS theme. */
-:root {
-  color-scheme: light dark;
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Default theme: Dark Green */
+:root,
+:root[data-theme="dark-green"] {
+  color-scheme: dark;
+  --app-outer: #020c08;
+  --app-shell: #051810;
+  --app-card: #092418;
+  --app-subtle: #0e3322;
+  --app-border: #164932;
   -webkit-tap-highlight-color: transparent;
+}
+
+:root[data-theme="oled"] {
+  color-scheme: dark;
+  --app-outer: #000000;
+  --app-shell: #000000;
+  --app-card: #0a110e;
+  --app-subtle: #111d17;
+  --app-border: #1b3126;
+}
+
+:root[data-theme="dark-slate"] {
+  color-scheme: dark;
+  --app-outer: #020617;
+  --app-shell: #070d1f;
+  --app-card: #0f172a;
+  --app-subtle: #1e293b;
+  --app-border: #293548;
+}
+
+:root[data-theme="light-green"] {
+  color-scheme: light;
+  --app-outer: #dcfce7;
+  --app-shell: #f1fbf5;
+  --app-card: #ffffff;
+  --app-subtle: #e6f7ed;
+  --app-border: #bbf7d0;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --app-outer: #e2e8f0;
+  --app-shell: #f8fafc;
+  --app-card: #ffffff;
+  --app-subtle: #f1f5f9;
+  --app-border: #e2e8f0;
 }
 
 html,
 body {
   height: 100%;
+  background-color: var(--app-outer);
   overscroll-behavior: none;
   touch-action: manipulation;
   user-select: none;

@@ -18,10 +18,10 @@ export function ProgressBar({ ratio, label }: ProgressBarProps) {
         aria-valuenow={percent}
         aria-valuemin={0}
         aria-valuemax={100}
-        className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800"
+        className="h-2.5 overflow-hidden rounded-full bg-[var(--app-subtle)]"
       >
         <div
-          className={`h-full rounded-full transition-[width] duration-300 ${percent === 100 ? 'bg-green-600' : 'bg-blue-600'}`}
+          className="h-full rounded-full bg-emerald-500 transition-[width] duration-300"
           style={{ width: `${ratio * 100}%` }}
         />
       </div>

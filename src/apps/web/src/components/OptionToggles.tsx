@@ -53,7 +53,7 @@ interface ToggleProps {
 
 function Toggle({ label, detail, checked, onChange }: ToggleProps) {
   return (
-    <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 px-3.5 py-3 transition active:scale-[0.99] dark:border-slate-800 dark:bg-slate-800/50">
+    <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-[var(--app-border)] bg-[var(--app-subtle)] px-3.5 py-3 transition active:scale-[0.99]">
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-medium">{label}</span>
         <span className="block text-xs text-slate-500 dark:text-slate-400">{detail}</span>
@@ -62,7 +62,7 @@ function Toggle({ label, detail, checked, onChange }: ToggleProps) {
         type="checkbox"
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
-        className="size-5 shrink-0 accent-blue-600"
+        className="size-5 shrink-0 accent-emerald-600"
       />
     </label>
   )

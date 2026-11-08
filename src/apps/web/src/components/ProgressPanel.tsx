@@ -38,20 +38,18 @@ export function ProgressPanel({ title, step, ratio, status, onCancel }: Progress
               <span
                 aria-current={active ? 'step' : undefined}
                 className={`flex items-center gap-1.5 ${
-                  finished
-                    ? 'text-green-700 dark:text-green-400'
-                    : active
-                      ? 'text-blue-700 dark:text-blue-300'
-                      : 'text-slate-400 dark:text-slate-500'
+                  finished || active
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-slate-400 dark:text-slate-500'
                 }`}
               >
                 <span
                   className={`flex size-6 shrink-0 items-center justify-center rounded-full text-xs ${
                     finished
-                      ? 'bg-green-600 text-white'
+                      ? 'bg-emerald-600 text-white'
                       : active
-                        ? 'bg-blue-600 text-white ring-4 ring-blue-600/20'
-                        : 'border border-slate-300 dark:border-slate-700'
+                        ? 'bg-emerald-600 text-white ring-4 ring-emerald-500/25'
+                        : 'border border-[var(--app-border)]'
                   }`}
                 >
                   {finished ? '✓' : i + 1}
@@ -61,7 +59,7 @@ export function ProgressPanel({ title, step, ratio, status, onCancel }: Progress
               {i < STEPS.length - 1 && (
                 <span
                   aria-hidden="true"
-                  className={`h-px flex-1 ${finished ? 'bg-green-600' : 'bg-slate-200 dark:bg-slate-700'}`}
+                  className={`h-px flex-1 ${finished ? 'bg-emerald-600' : 'bg-[var(--app-border)]'}`}
                 />
               )}
             </li>

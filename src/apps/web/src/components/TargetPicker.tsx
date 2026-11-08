@@ -52,13 +52,13 @@ export function TargetPicker({ category, target, onChange }: TargetPickerProps) 
             autoFocus
             value={target.customValue}
             onChange={(event) => onChange({ ...target, customValue: event.target.value })}
-            className="min-w-0 flex-1 rounded-2xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-base dark:border-slate-700 dark:bg-slate-800"
+            className="min-w-0 flex-1 rounded-2xl border border-[var(--app-border)] bg-[var(--app-subtle)] px-3.5 py-2.5 text-base"
           />
           <select
             aria-label="Unit"
             value={target.customUnit}
             onChange={(event) => onChange({ ...target, customUnit: event.target.value as SizeUnit })}
-            className="rounded-2xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-base font-medium dark:border-slate-700 dark:bg-slate-800"
+            className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-subtle)] px-3.5 py-2.5 text-base font-medium"
           >
             <option value="MB">MB</option>
             <option value="KB">KB</option>

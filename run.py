@@ -39,11 +39,15 @@ def find_npm() -> str:
     raise RuntimeError("Could not find 'npm' in PATH. Please install Node.js 22+.")
 
 
-def find_free_port() -> int:
-    """Find an available localhost TCP port."""
+def find_free_port(preferred: int = 5173) -> int:
+    """Return `preferred` localhost TCP port if available, otherwise any free port."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        sock.bind(("127.0.0.1", 0))
-        return int(sock.getsockname()[1])
+        try:
+            sock.bind(("127.0.0.1", preferred))
+            return preferred
+        except OSError:
+            sock.bind(("127.0.0.1", 0))
+            return int(sock.getsockname()[1])
 
 
 def wait_for_server(url: str, server_proc: subprocess.Popen, timeout: float = 30.0) -> bool:
@@ -173,14 +177,13 @@ def main() -> int:
 
     threading.Thread(target=_drain_logs, daemon=True).start()
     window_proc: subprocess.Popen | None = None
-    temp_profile_dir: str | None = None
+    profile_dir = Path(tempfile.gettempdir()) / "fsm-app-window-profile"
+    profile_dir.mkdir(parents=True, exist_ok=True)
 
     def cleanup(*_args: object) -> None:
         print("\n==> Shutting down application and dev server...")
         kill_process_tree(window_proc)
         kill_process_tree(server_proc)
-        if temp_profile_dir and os.path.isdir(temp_profile_dir):
-            shutil.rmtree(temp_profile_dir, ignore_errors=True)
 
     signal.signal(signal.SIGINT, lambda *_: sys.exit(0))
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
@@ -196,11 +199,10 @@ def main() -> int:
 
         browser_bin = find_app_browser()
         if browser_bin:
-            temp_profile_dir = tempfile.mkdtemp(prefix="fsm-app-window-")
             window_cmd = [
                 browser_bin,
                 f"--app={url}",
-                f"--user-data-dir={temp_profile_dir}",
+                f"--user-data-dir={profile_dir}",
                 "--window-size=412,880",
                 "--no-first-run",
                 "--no-default-browser-check",

@@ -21,7 +21,11 @@ The release workflow marks alpha, beta and rc versions as pre-releases on GitHub
 **Type:** Beta. Every feature works and has been tested in Chrome and Edge, but the app isn't public yet.
 
 ### Added
-- Mobile-first vertical phone UI tailored for all phone screen sizes (compact to tall screens), with sticky app bar, thumb-friendly bottom action bar, and full-width touch controls.
+- Mobile-first vertical phone UI tailored for all phone screen sizes (compact to tall screens), with sticky app bar, thumb-friendly bottom navigation bar, and full-width touch controls.
+- Bottom slide/scroll bar switching between **View File** (left), **Shrink File** (center), and **Settings** (right).
+- On-device **View File** scene that lets you pick and read files a phone often can't open directly (`.txt`, `.log`, `.json`, `.csv`, `.xml`, code/config files, HEIC photos, PDFs, audio/video, and binary hex/text inspection) with line search, wrap toggle, text resizing, and copy.
+- **Settings** scene with 5 selectable themes (**Dark Green** default, **OLED Black**, **Dark Slate**, **Mint Light**, **Classic Light**), persistent settings stored on-device across restarts, default privacy/compression options, and an Open-Source & 100% Local privacy card linking to the GitHub repository.
+- On-device history (via IndexedDB) remembering the last 10 viewed files and last 10 size-reduced files so they can be viewed or downloaded again anytime, with a Settings toggle to disable or clear history.
 - Portrait orientation lock via Web App Manifest (`portrait-primary`), Screen Orientation API, and a landscape rotation blocker overlay on mobile devices.
 - Official app logo (`logo.png`) used as the app icon and in the top-left header of the app.
 - `run.py` in the repository root to automatically install dependencies, launch the dev server, open the app in a standalone portrait phone window (`412×880`), and shut everything down when the window closes.
