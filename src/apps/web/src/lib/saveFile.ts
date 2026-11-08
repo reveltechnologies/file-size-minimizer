@@ -1,3 +1,6 @@
+import { Capacitor } from '@capacitor/core'
+import { Directory, Filesystem } from '@capacitor/filesystem'
+import { Share } from '@capacitor/share'
 import type { OutputLocationMode } from './settingsStore'
 
 interface WritableWindow extends Window {
@@ -47,7 +50,7 @@ async function saveDirHandle(handle: FileSystemDirectoryHandle): Promise<void> {
       }
     })
   } catch {
-    // Ignore if browser disallow storing handles.
+    // Ignore if browser disallows storing handles.
   }
 }
 
@@ -80,6 +83,29 @@ export async function pickFixedDirectory(): Promise<string | null> {
   }
 }
 
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      const result = typeof reader.result === 'string' ? reader.result : ''
+      const comma = result.indexOf(',')
+      resolve(comma >= 0 ? result.slice(comma + 1) : result)
+    }
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(blob)
+  })
+}
+
+async function writeToNativeCache(blob: Blob, fileName: string): Promise<string> {
+  const data = await blobToBase64(blob)
+  const written = await Filesystem.writeFile({
+    path: fileName,
+    data,
+    directory: Directory.Cache,
+  })
+  return written.uri
+}
+
 function triggerBrowserDownload(blob: Blob, fileName: string): void {
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
@@ -94,6 +120,26 @@ export async function downloadBlob(
   fileName: string,
   mode: OutputLocationMode = 'same',
 ): Promise<void> {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      if (mode !== 'ask') {
+        const data = await blobToBase64(blob)
+        await Filesystem.writeFile({
+          path: `FileSizeMinimizer/${fileName}`,
+          data,
+          directory: Directory.Documents,
+          recursive: true,
+        })
+        return
+      }
+    } catch {
+      // Fall back to system share/save dialog if Documents write is restricted.
+    }
+    const uri = await writeToNativeCache(blob, fileName)
+    await Share.share({ title: fileName, url: uri })
+    return
+  }
+
   const win = window as WritableWindow
 
   if (mode === 'ask' && typeof win.showSaveFilePicker === 'function') {
@@ -131,11 +177,17 @@ export async function downloadBlob(
 }
 
 export function canShareFile(blob: Blob, fileName: string): boolean {
+  if (Capacitor.isNativePlatform()) return true
   const file = new File([blob], fileName, { type: blob.type })
   return typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })
 }
 
 export async function shareBlob(blob: Blob, fileName: string): Promise<void> {
+  if (Capacitor.isNativePlatform()) {
+    const uri = await writeToNativeCache(blob, fileName)
+    await Share.share({ title: fileName, url: uri })
+    return
+  }
   const file = new File([blob], fileName, { type: blob.type })
   try {
     await navigator.share({ files: [file] })

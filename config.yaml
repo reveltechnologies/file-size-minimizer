@@ -26,6 +26,7 @@ documentation_sync: # Sync docs, workflows, and metadata across branches
     - update.json
     - CHANGELOG.md
     - README.md
+    - PRIVACY_POLICY.md
     - SECURITY.md
     - TERMS_OF_USE.md
     - LICENSE*

@@ -1,19 +1,19 @@
-# Fit-to-Size & Unseen Data File Shrinker
+# File Size Minimizer
 
-Shrink a video, photo or PDF so it fits an upload limit, and remove the hidden data inside it. Everything happens in your browser: **your files never leave your device.**
-
----
-
-## How to use it
-
-1. **Drop your file** on the page, or click to choose one. You can pick several photos to combine them into one PDF.
-2. **Choose where it's going.** Each button is a common upload limit. Use **Custom** to type your own.
-3. **Check the options** (see below), then press **Shrink**.
-4. **Download the result.** The receipt shows how much smaller it got and what hidden data was removed.
+Shrink videos, photos, and PDFs to fit upload limits, strip metadata, and view local files on your phone or browser. Everything runs on your device: **your files never leave your device.**
 
 ---
 
-## Size limits
+## How to use
+
+1. **Select a file** (or multiple photos to combine into one A4 PDF).
+2. **Choose a target size**: pick a preset (`Discord`, `WhatsApp`, `Gmail`, `Portal ID`, `Visa Portal`) or enter a custom KB/MB limit.
+3. **Adjust options** (remove metadata, smart video optimize, mute audio) and tap **Shrink**.
+4. **Save or share** the output file.
+
+---
+
+## Presets
 
 | File type | Preset | Limit |
 | --- | --- | --- |
@@ -26,32 +26,14 @@ Shrink a video, photo or PDF so it fits an upload limit, and remove the hidden d
 | PDF | Standard Doc | 5 MB |
 | PDF | Email Packet | 10 MB |
 
-### Why is my file 9.4 MB when I chose 10 MB?
-
-The app aims a little under the limit on purpose, so the file is accepted everywhere. Sizes are counted the strict way (1 MB = 1,000,000 bytes), which is how most upload forms count them. A 10 MB target usually gives about 9.2 to 9.9 MB.
+Sizes use decimal units (1 MB = 1,000,000 bytes) so the output fits strict upload forms everywhere.
 
 ---
 
 ## Options
 
-| Option | What it does |
+| Option | Description |
 | --- | --- |
-| **Remove hidden data** | Removes GPS location, camera serial numbers, author names and PDF edit history. On by default. |
-| **Smart optimize** (video) | Turns HDR into normal colour, 60 FPS into 30 FPS, and lowers the resolution when the limit is tight. On by default. |
-| **Mute audio** (video) | Removes the sound, so the whole size goes to the picture. Useful for long videos. |
-
----
-
-## Common questions
-
-**The app says my video will look blurry.**
-The video is long compared with the size limit, so there isn't much room for each second of picture. Try **Mute audio**, choose a bigger limit, or tick **Shrink anyway** if a blurry video is fine.
-
-**It says it couldn't get under the limit.**
-You still get the smallest version it could make. For PDFs this happens when the pages are mostly text or drawings rather than photos, since those can't be shrunk much more.
-
-**The first video takes longer.**
-The first time, the app downloads its video tool (about 9 MB). After that it starts straight away.
-
-**Which browsers work?**
-Chrome and Edge are tested. Keep the tab open while it works.
+| **Remove metadata** | Strips EXIF, GPS location, camera serials, author tags, and PDF revision history (enabled by default). |
+| **Smart optimize** (video) | Converts HDR to SDR, caps 60 FPS at 30 FPS, and scales resolution when the size limit is tight (enabled by default). |
+| **Mute audio** (video) | Drops the audio track so the full bitrate budget goes to video quality. |

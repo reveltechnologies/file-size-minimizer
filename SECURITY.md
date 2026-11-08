@@ -4,17 +4,17 @@
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.5.x   | :white_check_mark: |
-| < 0.5   | :x:                |
+| 1.x     | :white_check_mark: |
+| < 1.0   | :x:                |
 
-## Local-Only Architecture & Data Privacy
+## Local-Only Architecture
 
-Fit-to-Size File Shrinker is designed to process all files strictly on the user's device:
+File Size Minimizer processes all files locally on the user's device:
 
-- **Zero File Uploads:** Videos, photos, PDFs, and viewed files are processed in local memory inside the browser or mobile WebView. No file contents or metadata are ever transmitted to external servers.
-- **On-Device Storage:** User settings (`localStorage`) and recent file history (`IndexedDB`) remain exclusively on the local device and can be disabled or cleared at any time in **Settings**.
-- **Metadata Stripping:** When **Remove metadata** is enabled, EXIF tags, GPS coordinates, camera serial numbers, and PDF edit history are stripped locally before saving.
+- **No File Uploads:** Videos, photos, PDFs, and viewed files are processed in local memory on the device. No file contents or metadata are sent to external servers.
+- **Local Storage:** Settings (`localStorage`) and recent file history (`IndexedDB`) stay on the device and can be disabled or cleared in **Settings**.
+- **Metadata Removal:** When **Remove metadata** is enabled, EXIF tags, GPS coordinates, camera serial numbers, and PDF edit history are stripped locally before saving.
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability, please report it via [GitHub Private Vulnerability Reporting](https://github.com/reveltechnologies/file-size-minimizer/security/advisories/new) or by contacting [Revel Technologies](https://github.com/reveltechnologies) directly. Please do not open a public issue for undisclosed vulnerabilities.
+Report security issues via [GitHub Private Vulnerability Reporting](https://github.com/reveltechnologies/file-size-minimizer/security/advisories/new). Please do not open public issues for undisclosed vulnerabilities.

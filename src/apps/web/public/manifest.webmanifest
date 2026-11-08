@@ -1,6 +1,6 @@
 {
-  "name": "Fit-to-Size File Shrinker",
-  "short_name": "File Shrinker",
+  "name": "File Size Minimizer",
+  "short_name": "File Minimizer",
   "description": "Shrink videos, photos and PDFs under any upload limit and strip hidden metadata on your phone.",
   "start_url": "/",
   "display": "standalone",

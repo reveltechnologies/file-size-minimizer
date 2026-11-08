@@ -14,6 +14,8 @@ import {
 import { CARD, choiceClass, SECONDARY_BUTTON, SUBTLE_BOX } from './styles'
 
 const GITHUB_REPO_URL = 'https://github.com/reveltechnologies/file-size-minimizer'
+const PRIVACY_POLICY_URL =
+  'https://github.com/reveltechnologies/file-size-minimizer/blob/main/PRIVACY_POLICY.md'
 const SECURITY_POLICY_URL =
   'https://github.com/reveltechnologies/file-size-minimizer/blob/main/SECURITY.md'
 const TERMS_OF_USE_URL =
@@ -326,7 +328,7 @@ export function SettingsPanel({
           <div>
             <p className="font-semibold">{t('settings.openSourceLocal')}</p>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              {t('settings.noExternalData')} · v0.5.0-beta.1
+              {t('settings.noExternalData')} · v1.0.0
             </p>
           </div>
           <a
@@ -343,7 +345,28 @@ export function SettingsPanel({
           </a>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 pt-0.5 text-center font-medium">
+        <div className="grid grid-cols-2 gap-2 pt-0.5 text-center font-medium">
+          <a
+            href={PRIVACY_POLICY_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`${SUBTLE_BOX} flex items-center justify-center gap-1.5 py-2 text-xs active:scale-95`}
+          >
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="size-3.5 text-emerald-500"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect x="3" y="11" width="18" height="11" rx="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <span>{t('settings.privacy')}</span>
+          </a>
           <a
             href={SECURITY_POLICY_URL}
             target="_blank"

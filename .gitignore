@@ -4,6 +4,17 @@ state/
 node_modules/
 dist/
 
+# Android bundles, APKs & signing keys (never commit)
+*.aab
+*.apk
+*.ap_
+*.aar
+*.jks
+*.keystore
+keystore.properties
+upload-keystore*
+*signing-key*
+
 # Operating System
 .DS_Store
 Thumbs.db

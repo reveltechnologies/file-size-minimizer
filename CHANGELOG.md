@@ -5,19 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.0-beta.1] - 2026-11-08
+## [1.0.0] - 2026-11-08
+
+First stable production release for Google Play and web.
 
 ### Added
-- Portrait mobile UI with `logo.png` header, swipe navigation, and bottom slide/tap bar across **View**, **Shrink**, and **Settings**.
-- Local **View** scene for `.txt`, `.log`, `.json`, `.csv`, code/config files, HEIC photos, PDFs, audio/video, and binary hex/text inspection.
+- Google Play Android release build (`.aab`) via Capacitor (`com.reveltechnologies.filesizeminimizer`, targetSdk 36, portrait-locked, AndroidX `SplashScreen` API, adaptive launcher icons, native file saving and sharing).
+- Bundled `@ffmpeg/core` (`ffmpeg-core.js` and `ffmpeg-core.wasm`) locally so video compression works 100% offline without external CDN requests.
+- Dedicated [Privacy Policy](PRIVACY_POLICY.md) (`PRIVACY_POLICY.md`) linked in Settings alongside Security Policy, Terms of Use, and GPL-3.0 License.
+- Portrait mobile UI with `logo.png` header, full-screen horizontal swipe navigation, and bottom slide/tap bar across **View**, **Shrink**, and **Settings**.
+- On-device **View** scene for `.txt`, `.log`, `.json`, `.csv`, code/config files, HEIC photos, PDFs, audio/video, and binary hex/text inspection.
 - Multi-language support (`en_us` and `tr_tr`) with automatic device language detection on first launch.
-- **Settings** scene with 5 themes (Dark Green default), output folder mode, custom file prefix/suffix, default options, and links to GitHub, `SECURITY.md`, `TERMS_OF_USE.md`, and `LICENSE`.
+- **Settings** scene with 5 themes (Dark Green default), output folder mode, custom file prefix/suffix, and default compression options.
 - Local IndexedDB history for the last 10 viewed and last 10 shrunk files with re-view, re-download, and clear/disable controls.
-- `run.py` launcher for running the app in a standalone portrait window.
+- `run.py` launcher for running the app locally in a standalone portrait window.
 
 ### Changed
 - Moved workspace packages (`apps/`, `packages/`, `package.json`) into `src/`.
-- Simplified UI copy and replaced text action buttons with icons.
+- Simplified UI copy, codebase comments, and repository documentation.
+
+## [0.5.0-beta.1] - 2026-11-08
+
+### Added
+- Pre-release mobile UI, local file viewer, themes, i18n (`en_us`, `tr_tr`), and local file history.
 
 ## [0.4.2-beta.1] - 2026-11-05
 

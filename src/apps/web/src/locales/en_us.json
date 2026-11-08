@@ -108,6 +108,7 @@
   "settings.clearHistory": "Clear history ({count})",
   "settings.openSourceLocal": "Open-Source · 100% Local",
   "settings.noExternalData": "No external data transfer",
+  "settings.privacy": "Privacy",
   "settings.security": "Security",
   "settings.terms": "Terms"
 }

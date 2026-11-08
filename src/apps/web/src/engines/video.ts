@@ -1,4 +1,6 @@
 import { FFFSType, FFmpeg, type LogEvent } from '@ffmpeg/ffmpeg'
+import coreURL from '@ffmpeg/core?url'
+import wasmURL from '@ffmpeg/core/wasm?url'
 import {
   buildDurationScanArgs,
   buildVideoArgs,
@@ -13,8 +15,6 @@ import {
 } from '@revel/core'
 import { BlurryVideoError, type CompressJob, type CompressResult } from './types'
 
-const CORE_BASE_URL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm'
-const WASM_BYTES = 32_232_419
 const MAX_ATTEMPTS = 3
 
 let ffmpegPromise: Promise<FFmpeg> | null = null
@@ -118,33 +118,9 @@ function loadFFmpeg(onProgress: (ratio: number) => void): Promise<FFmpeg> {
 
 async function createFFmpeg(onProgress: (ratio: number) => void): Promise<FFmpeg> {
   const ffmpeg = new FFmpeg()
-  await ffmpeg.load({
-    coreURL: await downloadAsBlobURL(`${CORE_BASE_URL}/ffmpeg-core.js`, 'text/javascript'),
-    wasmURL: await downloadAsBlobURL(`${CORE_BASE_URL}/ffmpeg-core.wasm`, 'application/wasm', (received) =>
-      onProgress(Math.min(1, received / WASM_BYTES)),
-    ),
-  })
+  await ffmpeg.load({ coreURL, wasmURL })
+  onProgress(1)
   return ffmpeg
-}
-
-async function downloadAsBlobURL(
-  url: string,
-  type: string,
-  onReceived?: (bytes: number) => void,
-): Promise<string> {
-  const response = await fetch(url)
-  if (!response.ok || !response.body) {
-    throw new Error(`Failed to download video engine (HTTP ${response.status}).`)
-  }
-  const chunks: Uint8Array<ArrayBuffer>[] = []
-  let received = 0
-  const reader = response.body.getReader()
-  for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
-    chunks.push(chunk.value)
-    received += chunk.value.byteLength
-    onReceived?.(received)
-  }
-  return URL.createObjectURL(new Blob(chunks, { type }))
 }
 
 async function run(

@@ -108,6 +108,7 @@
   "settings.clearHistory": "Geçmişi sil ({count})",
   "settings.openSourceLocal": "Açık Kaynak · %100 Yerel",
   "settings.noExternalData": "Dışarıya veri gönderilmez",
+  "settings.privacy": "Gizlilik",
   "settings.security": "Güvenlik",
   "settings.terms": "Koşullar"
 }
