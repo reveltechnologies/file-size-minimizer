@@ -19,3 +19,4 @@ desktop.ini
 .env
 .env.local
 *.log
+/__pycache__

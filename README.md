@@ -36,7 +36,15 @@ Sizes use decimal units (1 MB = 1,000,000 bytes), the stricter reading of any up
 
 ## Running it locally
 
-You need **Node.js 22 LTS** (Vite 8 needs at least 20.19 or 22.12). Run every command from `src/`.
+You need **Node.js 22 LTS** (Vite 8 needs at least 20.19 or 22.12).
+
+To automatically install dependencies, start the server, and open the app in a standalone window (stopping everything when you close the window), run [`run.py`](run.py) from the repository root:
+
+```sh
+python run.py
+```
+
+Or run `npm` commands manually from `src/`:
 
 ```sh
 git clone https://github.com/reveltechnologies/file-size-minimizer.git

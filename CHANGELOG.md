@@ -20,6 +20,9 @@ The release workflow marks alpha, beta and rc versions as pre-releases on GitHub
 
 **Type:** Beta. Every feature works and has been tested in Chrome and Edge, but the app isn't public yet.
 
+### Added
+- `run.py` in the repository root to automatically install dependencies, launch the dev server, open the app in a standalone desktop window, and shut everything down when the window closes.
+
 ### Changed
 - Moved all code and workspace files (`apps/`, `packages/`, `package.json`, `package-lock.json`) into `src/` to separate the application code from repository documentation and workflows.
 
