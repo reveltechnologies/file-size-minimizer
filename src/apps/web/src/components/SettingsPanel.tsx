@@ -1,3 +1,4 @@
+import { DEFAULT_OPTIONS } from '@revel/core'
 import {
   AVAILABLE_LOCALES,
   useI18n,
@@ -5,7 +6,6 @@ import {
 } from '../lib/i18n'
 import { pickFixedDirectory } from '../lib/saveFile'
 import {
-  createDefaultSettings,
   THEMES,
   type AppSettings,
   type DefaultPhotoFormat,
@@ -52,14 +52,19 @@ export function SettingsPanel({
     fileSuffix,
   } = settings
 
-  const photoFormatChoices: { id: DefaultPhotoFormat; label: string }[] = [
-    { id: 'auto', label: t('settings.photoAuto') },
-    { id: 'jpeg', label: 'JPG' },
-    { id: 'png', label: 'PNG' },
+  const photoFormatChoices: { id: DefaultPhotoFormat; label: string; detail: string }[] = [
+    { id: 'auto', label: t('settings.photoAuto'), detail: t('settings.photoAutoDetail') },
+    { id: 'jpeg', label: 'JPG', detail: t('format.smaller') },
+    { id: 'png', label: 'PNG', detail: t('format.transparent') },
   ]
 
   function handleResetDefaults() {
-    onChangeSettings(createDefaultSettings())
+    onChangeSettings({
+      ...settings,
+      options: { ...DEFAULT_OPTIONS },
+      defaultPhotoFormat: 'auto',
+      rememberHistory: true,
+    })
   }
 
   async function handlePickFolder() {
@@ -259,18 +264,45 @@ export function SettingsPanel({
           onChange={(checked) => onChangeSettings({ ...settings, rememberHistory: checked })}
         />
 
-        <div className="grid grid-cols-3 gap-2 pt-1">
-          {photoFormatChoices.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              aria-pressed={defaultPhotoFormat === item.id}
-              onClick={() => onChangeSettings({ ...settings, defaultPhotoFormat: item.id })}
-              className={`${choiceClass(defaultPhotoFormat === item.id)} flex min-h-10 items-center justify-center py-2 text-center text-xs font-semibold`}
+        <div className={`${SUBTLE_BOX} flex flex-col gap-2 p-3`}>
+          <div className="flex items-center gap-2 text-xs font-medium">
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="size-4 shrink-0 text-emerald-500"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              {item.label}
-            </button>
-          ))}
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <path d="m21 15-5-5L5 21" />
+            </svg>
+            <span>{t('settings.photoFormat')}</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {photoFormatChoices.map((item) => {
+              const active = defaultPhotoFormat === item.id
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => onChangeSettings({ ...settings, defaultPhotoFormat: item.id })}
+                  className={`flex flex-col items-center justify-center rounded-xl border px-2 py-2 text-center transition active:scale-[0.98] ${
+                    active
+                      ? 'border-emerald-500 bg-emerald-600 text-white shadow-xs'
+                      : 'border-[var(--app-border)] bg-[var(--app-card)] text-slate-900 dark:text-slate-100'
+                  }`}
+                >
+                  <span className="text-xs font-semibold">{item.label}</span>
+                  <span className="text-[10px] opacity-80">{item.detail}</span>
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         <div className="flex gap-2 pt-1">
