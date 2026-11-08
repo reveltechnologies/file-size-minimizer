@@ -7,7 +7,7 @@ import {
   type FileCategory,
   type ImageFormat,
 } from '@revel/core'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { DropZone } from './components/DropZone'
 import { FileViewer } from './components/FileViewer'
 import { ImageFormatPicker } from './components/ImageFormatPicker'
@@ -26,6 +26,7 @@ import {
   listHistory,
   type HistoryEntry,
 } from './lib/historyStore'
+import { I18nContext, translate, type TranslationKey } from './lib/i18n'
 import { pickFiles, type PickedFiles } from './lib/pickFiles'
 import {
   applyNaming,
@@ -40,22 +41,22 @@ import { useVideoInfo } from './lib/useVideoInfo'
 
 type Scene = 'viewer' | 'shrink' | 'settings'
 
-const SCENES: { id: Scene; label: string }[] = [
-  { id: 'viewer', label: 'View' },
-  { id: 'shrink', label: 'Shrink' },
-  { id: 'settings', label: 'Settings' },
+const SCENES: { id: Scene; labelKey: TranslationKey }[] = [
+  { id: 'viewer', labelKey: 'scene.viewer' },
+  { id: 'shrink', labelKey: 'scene.shrink' },
+  { id: 'settings', labelKey: 'scene.settings' },
 ]
 
-const CATEGORY_LABEL: Record<FileCategory, string> = {
-  video: 'Video',
-  image: 'Photo',
-  pdf: 'PDF',
+const CATEGORY_KEY: Record<FileCategory, TranslationKey> = {
+  video: 'category.video',
+  image: 'category.image',
+  pdf: 'category.pdf',
 }
 
-const WORKING_TITLE: Record<FileCategory, string> = {
-  video: 'Shrinking video…',
-  image: 'Shrinking photo…',
-  pdf: 'Shrinking PDF…',
+const WORKING_KEY: Record<FileCategory, TranslationKey> = {
+  video: 'shrink.workingVideo',
+  image: 'shrink.workingImage',
+  pdf: 'shrink.workingPdf',
 }
 
 const DONE_PAUSE_MS = 700
@@ -101,6 +102,16 @@ function App() {
     axis: 'none',
   })
 
+  const i18nValue = useMemo(
+    () => ({
+      locale: settings.language,
+      t: (key: TranslationKey, vars?: Record<string, string | number>) =>
+        translate(settings.language, key, vars),
+    }),
+    [settings.language],
+  )
+  const { t } = i18nValue
+
   useEffect(() => {
     const orientation = screen.orientation as ScreenOrientation & {
       lock?: (mode: string) => Promise<void>
@@ -109,9 +120,10 @@ function App() {
   }, [])
 
   useEffect(() => {
-    const themeMeta = THEMES.find((t) => t.id === settings.theme) ?? THEMES[0]
+    const themeMeta = THEMES.find((item) => item.id === settings.theme) ?? THEMES[0]
     document.documentElement.dataset.theme = themeMeta.id
     document.documentElement.classList.toggle('dark', themeMeta.isDark)
+    document.documentElement.lang = settings.language.split('_')[0] || 'en'
     saveSettings(settings)
   }, [settings])
 
@@ -263,317 +275,323 @@ function App() {
   }
 
   return (
-    <div className="h-dvh overflow-hidden bg-[var(--app-outer)] text-slate-900 dark:text-slate-100">
-      {/* Portrait-only lock overlay when a physical phone is rotated horizontally */}
-      <div
-        aria-hidden="true"
-        className="portrait-lock-overlay fixed inset-0 z-50 hidden flex-col items-center justify-center gap-2 bg-black px-6 text-center text-white"
-      >
-        <svg
-          viewBox="0 0 24 24"
-          className="size-12 text-emerald-400"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+    <I18nContext value={i18nValue}>
+      <div className="h-dvh overflow-hidden bg-[var(--app-outer)] text-slate-900 dark:text-slate-100">
+        {/* Portrait-only lock overlay when a physical phone is rotated horizontally */}
+        <div
+          aria-hidden="true"
+          className="portrait-lock-overlay fixed inset-0 z-50 hidden flex-col items-center justify-center gap-2 bg-black px-6 text-center text-white"
         >
-          <rect x="6" y="2" width="12" height="20" rx="2" />
-          <path d="M12 18h.01" />
-        </svg>
-        <p className="text-base font-bold">Portrait Only</p>
-      </div>
+          <svg
+            viewBox="0 0 24 24"
+            className="size-12 text-emerald-400"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="6" y="2" width="12" height="20" rx="2" />
+            <path d="M12 18h.01" />
+          </svg>
+          <p className="text-base font-bold">{t('common.portraitOnly')}</p>
+        </div>
 
-      {/* Vertical phone shell constrained for every phone screen */}
-      <div className="mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-[var(--app-shell)] shadow-xl">
-        <header className="z-10 flex shrink-0 items-center justify-between gap-3 border-b border-[var(--app-border)] bg-[var(--app-shell)] px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-2.5">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <img src="/logo.png" alt="" className="size-8 shrink-0 object-contain" />
-            <h1 className="truncate text-base font-bold tracking-tight">
-              {activeSceneMeta.label}
-            </h1>
-          </div>
+        {/* Vertical phone shell constrained for every phone screen */}
+        <div className="mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-[var(--app-shell)] shadow-xl">
+          <header className="z-10 flex shrink-0 items-center justify-between gap-3 border-b border-[var(--app-border)] bg-[var(--app-shell)] px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-2.5">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <img src="/logo.png" alt="" className="size-8 shrink-0 object-contain" />
+              <h1 className="truncate text-base font-bold tracking-tight">
+                {t(activeSceneMeta.labelKey)}
+              </h1>
+            </div>
 
-          {scene === 'shrink' && picked && progress === null && (
-            <button
-              type="button"
-              onClick={reset}
-              aria-label="Reset"
-              title="Reset"
-              className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-[var(--app-border)] bg-[var(--app-subtle)] active:scale-95"
-            >
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                className="size-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+            {scene === 'shrink' && picked && progress === null && (
+              <button
+                type="button"
+                onClick={reset}
+                aria-label={t('common.reset')}
+                title={t('common.reset')}
+                className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-[var(--app-border)] bg-[var(--app-subtle)] active:scale-95"
               >
-                <path d="M18 6 6 18M6 6l12 12" />
-              </svg>
-            </button>
-          )}
-        </header>
-
-        <main
-          ref={mainRef}
-          onPointerDown={(event) => {
-            if (isInteractiveElement(event.target)) return
-            gestureRef.current = {
-              startX: event.clientX,
-              startY: event.clientY,
-              startScrollTop: mainRef.current?.scrollTop ?? 0,
-              active: true,
-              axis: 'none',
-            }
-          }}
-          onPointerMove={(event) => {
-            const g = gestureRef.current
-            if (!g.active) return
-            const dx = event.clientX - g.startX
-            const dy = event.clientY - g.startY
-            if (g.axis === 'none') {
-              if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
-                g.axis = Math.abs(dx) > Math.abs(dy) * 1.25 ? 'x' : 'y'
-              }
-            }
-            if (g.axis === 'y' && mainRef.current && event.pointerType === 'mouse') {
-              mainRef.current.scrollTop = g.startScrollTop - dy
-            }
-          }}
-          onPointerUp={(event) => {
-            const g = gestureRef.current
-            if (!g.active) return
-            g.active = false
-            const dx = event.clientX - g.startX
-            const dy = event.clientY - g.startY
-            if (g.axis === 'x' && Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.25) {
-              if (dx < 0 && sceneIndex < SCENES.length - 1) {
-                setScene(SCENES[sceneIndex + 1].id)
-              } else if (dx > 0 && sceneIndex > 0) {
-                setScene(SCENES[sceneIndex - 1].id)
-              }
-            }
-          }}
-          onPointerCancel={() => {
-            gestureRef.current.active = false
-          }}
-          className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-3"
-        >
-          {scene === 'viewer' ? (
-            <FileViewer
-              recentViewed={settings.rememberHistory ? viewedHistory : []}
-              outputLocationMode={settings.outputLocationMode}
-              onFileViewed={handleFileViewed}
-              onClearViewed={() => {
-                setViewedHistory([])
-                void clearHistory('viewed')
-              }}
-            />
-          ) : scene === 'settings' ? (
-            <SettingsPanel
-              settings={settings}
-              onChangeSettings={handleChangeSettings}
-              storedHistoryCount={viewedHistory.length + shrunkHistory.length}
-              onClearAllHistory={() => {
-                setViewedHistory([])
-                setShrunkHistory([])
-                void clearHistory()
-              }}
-            />
-          ) : (
-            <>
-              {error && (
-                <div
-                  role="alert"
-                  className="flex flex-col gap-2 rounded-2xl border border-red-300 bg-red-50 px-3.5 py-2.5 text-xs text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200"
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  className="size-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 >
-                  <p>{error}</p>
-                  {offerBlurry && picked && progress === null && (
-                    <button
-                      type="button"
-                      onClick={() => void handleShrink(true)}
-                      className={SECONDARY_BUTTON}
-                    >
-                      Shrink anyway
-                    </button>
-                  )}
-                </div>
-              )}
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </header>
 
-              {picked && result && maxBytes !== null ? (
-                <SavingsReceipt
-                  originalBytes={totalBytes}
-                  maxBytes={maxBytes}
-                  result={result}
-                  outputLocationMode={settings.outputLocationMode}
-                  onReset={reset}
-                />
-              ) : picked && progress !== null ? (
-                <ProgressPanel
-                  title={isMerge ? 'Building PDF…' : WORKING_TITLE[picked.category]}
-                  step={step}
-                  ratio={progress}
-                  status={status}
-                  onCancel={() => abortRef.current?.abort()}
-                />
-              ) : picked ? (
-                <div className="flex flex-1 flex-col justify-between gap-3">
-                  <section className={`${CARD} flex flex-col gap-3.5`}>
-                    <div className="flex flex-col gap-2">
-                      <div className={`${SUBTLE_BOX} flex items-center justify-between gap-2 px-3 py-2`}>
-                        <div className="min-w-0">
-                          <p className="truncate text-xs font-semibold">
-                            {isMerge ? `${picked.files.length} photos → PDF` : picked.files[0].name}
-                          </p>
-                          <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
-                            {isMerge ? 'Photos' : CATEGORY_LABEL[picked.category]} ·{' '}
-                            {formatBytes(totalBytes)}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={reset}
-                          aria-label="Change file"
-                          className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-[var(--app-border)] active:scale-95"
-                        >
-                          <svg
-                            aria-hidden="true"
-                            viewBox="0 0 24 24"
-                            className="size-3.5"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2.2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="M18 6 6 18M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                      {isMerge && (
-                        <ol className="max-h-28 list-inside list-decimal overflow-y-auto rounded-xl border border-[var(--app-border)] px-3 py-1.5 text-xs text-slate-500 dark:text-slate-400">
-                          {picked.files.map((file, i) => (
-                            <li key={i} className="truncate py-0.5">
-                              {file.name}
-                            </li>
-                          ))}
-                        </ol>
-                      )}
-                    </div>
-
-                    <TargetPicker category={picked.category} target={target} onChange={setTarget} />
-                    {pngOffered && (
-                      <ImageFormatPicker
-                        format={imageFormat}
-                        transparent={transparent}
-                        onChange={setFormatOverride}
-                      />
-                    )}
-                    {!isMerge && (
-                      <OptionToggles
-                        category={picked.category}
-                        options={options}
-                        onChange={setOptions}
-                      />
-                    )}
-
-                    {videoInfo && videoPlan && maxBytes !== null && (
-                      <VideoPlanNote
-                        info={videoInfo}
-                        plan={videoPlan}
-                        maxBytes={maxBytes}
-                        smartOptimize={options.smartOptimize}
-                        allowBlurry={allowBlurry}
-                        onAllowBlurryChange={setAllowBlurry}
-                      />
-                    )}
-                  </section>
-
-                  <button
-                    type="button"
-                    disabled={!canShrink}
-                    onClick={() => void handleShrink()}
-                    className={PRIMARY_BUTTON}
-                  >
-                    {maxBytes === null
-                      ? 'Set limit'
-                      : `${isMerge ? 'Combine' : 'Shrink'} < ${formatBytes(maxBytes)}`}
-                  </button>
-                </div>
-              ) : (
-                <div className="flex flex-1 flex-col gap-3">
-                  <DropZone onFiles={handleFiles} />
-                  {settings.rememberHistory && (
-                    <RecentFilesCard
-                      title="Recent"
-                      entries={shrunkHistory}
-                      outputLocationMode={settings.outputLocationMode}
-                      onClear={() => {
-                        setShrunkHistory([])
-                        void clearHistory('shrunk')
-                      }}
-                    />
-                  )}
-                </div>
-              )}
-            </>
-          )}
-        </main>
-
-        {/* Bottom slide/scroll navigation bar: View | Shrink | Settings */}
-        <nav
-          aria-label="App scenes"
-          className="z-10 shrink-0 border-t border-[var(--app-border)] bg-[var(--app-shell)] px-4 pt-2 pb-[max(env(safe-area-inset-bottom),0.75rem)]"
-        >
-          <div
-            ref={barTrackRef}
+          <main
+            ref={mainRef}
             onPointerDown={(event) => {
-              draggingBarRef.current = true
-              event.currentTarget.setPointerCapture(event.pointerId)
-              updateSceneFromPointer(event.clientX)
+              if (isInteractiveElement(event.target)) return
+              gestureRef.current = {
+                startX: event.clientX,
+                startY: event.clientY,
+                startScrollTop: mainRef.current?.scrollTop ?? 0,
+                active: true,
+                axis: 'none',
+              }
             }}
             onPointerMove={(event) => {
-              if (!draggingBarRef.current) return
-              updateSceneFromPointer(event.clientX)
+              const g = gestureRef.current
+              if (!g.active) return
+              const dx = event.clientX - g.startX
+              const dy = event.clientY - g.startY
+              if (g.axis === 'none') {
+                if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+                  g.axis = Math.abs(dx) > Math.abs(dy) * 1.25 ? 'x' : 'y'
+                }
+              }
+              if (g.axis === 'y' && mainRef.current && event.pointerType === 'mouse') {
+                mainRef.current.scrollTop = g.startScrollTop - dy
+              }
             }}
-            onPointerUp={() => {
-              draggingBarRef.current = false
+            onPointerUp={(event) => {
+              const g = gestureRef.current
+              if (!g.active) return
+              g.active = false
+              const dx = event.clientX - g.startX
+              const dy = event.clientY - g.startY
+              if (g.axis === 'x' && Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.25) {
+                if (dx < 0 && sceneIndex < SCENES.length - 1) {
+                  setScene(SCENES[sceneIndex + 1].id)
+                } else if (dx > 0 && sceneIndex > 0) {
+                  setScene(SCENES[sceneIndex - 1].id)
+                }
+              }
             }}
             onPointerCancel={() => {
-              draggingBarRef.current = false
+              gestureRef.current.active = false
             }}
-            className="relative grid touch-none grid-cols-3 rounded-2xl border border-[var(--app-border)] bg-[var(--app-card)] p-1 select-none"
+            className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-3"
           >
-            <span
-              aria-hidden="true"
-              style={{ transform: `translateX(${sceneIndex * 100}%)` }}
-              className="pointer-events-none absolute top-1 bottom-1 left-1 w-[calc((100%-0.5rem)/3)] rounded-xl bg-emerald-600 shadow-sm transition-transform duration-200 ease-out"
-            />
+            {scene === 'viewer' ? (
+              <FileViewer
+                recentViewed={settings.rememberHistory ? viewedHistory : []}
+                outputLocationMode={settings.outputLocationMode}
+                onFileViewed={handleFileViewed}
+                onClearViewed={() => {
+                  setViewedHistory([])
+                  void clearHistory('viewed')
+                }}
+              />
+            ) : scene === 'settings' ? (
+              <SettingsPanel
+                settings={settings}
+                onChangeSettings={handleChangeSettings}
+                storedHistoryCount={viewedHistory.length + shrunkHistory.length}
+                onClearAllHistory={() => {
+                  setViewedHistory([])
+                  setShrunkHistory([])
+                  void clearHistory()
+                }}
+              />
+            ) : (
+              <>
+                {error && (
+                  <div
+                    role="alert"
+                    className="flex flex-col gap-2 rounded-2xl border border-red-300 bg-red-50 px-3.5 py-2.5 text-xs text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200"
+                  >
+                    <p>{error}</p>
+                    {offerBlurry && picked && progress === null && (
+                      <button
+                        type="button"
+                        onClick={() => void handleShrink(true)}
+                        className={SECONDARY_BUTTON}
+                      >
+                        {t('shrink.shrinkAnyway')}
+                      </button>
+                    )}
+                  </div>
+                )}
 
-            {SCENES.map((item) => {
-              const active = scene === item.id
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  aria-current={active ? 'page' : undefined}
-                  onClick={() => setScene(item.id)}
-                  className={`relative z-10 flex items-center justify-center rounded-xl py-2.5 text-xs font-semibold transition-colors ${
-                    active ? 'text-white' : 'text-slate-500 dark:text-slate-400'
-                  }`}
-                >
-                  <span>{item.label}</span>
-                </button>
-              )
-            })}
-          </div>
-        </nav>
+                {picked && result && maxBytes !== null ? (
+                  <SavingsReceipt
+                    originalBytes={totalBytes}
+                    maxBytes={maxBytes}
+                    result={result}
+                    outputLocationMode={settings.outputLocationMode}
+                    onReset={reset}
+                  />
+                ) : picked && progress !== null ? (
+                  <ProgressPanel
+                    title={isMerge ? t('shrink.buildingPdf') : t(WORKING_KEY[picked.category])}
+                    step={step}
+                    ratio={progress}
+                    status={status}
+                    onCancel={() => abortRef.current?.abort()}
+                  />
+                ) : picked ? (
+                  <div className="flex flex-1 flex-col justify-between gap-3">
+                    <section className={`${CARD} flex flex-col gap-3.5`}>
+                      <div className="flex flex-col gap-2">
+                        <div className={`${SUBTLE_BOX} flex items-center justify-between gap-2 px-3 py-2`}>
+                          <div className="min-w-0">
+                            <p className="truncate text-xs font-semibold">
+                              {isMerge
+                                ? t('shrink.photosToPdf', { count: picked.files.length })
+                                : picked.files[0].name}
+                            </p>
+                            <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
+                              {isMerge ? t('category.photos') : t(CATEGORY_KEY[picked.category])} ·{' '}
+                              {formatBytes(totalBytes)}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={reset}
+                            aria-label={t('common.close')}
+                            className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-[var(--app-border)] active:scale-95"
+                          >
+                            <svg
+                              aria-hidden="true"
+                              viewBox="0 0 24 24"
+                              className="size-3.5"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M18 6 6 18M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                        {isMerge && (
+                          <ol className="max-h-28 list-inside list-decimal overflow-y-auto rounded-xl border border-[var(--app-border)] px-3 py-1.5 text-xs text-slate-500 dark:text-slate-400">
+                            {picked.files.map((file, i) => (
+                              <li key={i} className="truncate py-0.5">
+                                {file.name}
+                              </li>
+                            ))}
+                          </ol>
+                        )}
+                      </div>
+
+                      <TargetPicker category={picked.category} target={target} onChange={setTarget} />
+                      {pngOffered && (
+                        <ImageFormatPicker
+                          format={imageFormat}
+                          transparent={transparent}
+                          onChange={setFormatOverride}
+                        />
+                      )}
+                      {!isMerge && (
+                        <OptionToggles
+                          category={picked.category}
+                          options={options}
+                          onChange={setOptions}
+                        />
+                      )}
+
+                      {videoInfo && videoPlan && maxBytes !== null && (
+                        <VideoPlanNote
+                          info={videoInfo}
+                          plan={videoPlan}
+                          maxBytes={maxBytes}
+                          smartOptimize={options.smartOptimize}
+                          allowBlurry={allowBlurry}
+                          onAllowBlurryChange={setAllowBlurry}
+                        />
+                      )}
+                    </section>
+
+                    <button
+                      type="button"
+                      disabled={!canShrink}
+                      onClick={() => void handleShrink()}
+                      className={PRIMARY_BUTTON}
+                    >
+                      {maxBytes === null
+                        ? t('shrink.setLimit')
+                        : isMerge
+                          ? t('shrink.combineUnder', { size: formatBytes(maxBytes) })
+                          : t('shrink.shrinkUnder', { size: formatBytes(maxBytes) })}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-1 flex-col gap-3">
+                    <DropZone onFiles={handleFiles} />
+                    {settings.rememberHistory && (
+                      <RecentFilesCard
+                        title={t('common.recent')}
+                        entries={shrunkHistory}
+                        outputLocationMode={settings.outputLocationMode}
+                        onClear={() => {
+                          setShrunkHistory([])
+                          void clearHistory('shrunk')
+                        }}
+                      />
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </main>
+
+          {/* Bottom slide/scroll navigation bar: View | Shrink | Settings */}
+          <nav
+            aria-label="App scenes"
+            className="z-10 shrink-0 border-t border-[var(--app-border)] bg-[var(--app-shell)] px-4 pt-2 pb-[max(env(safe-area-inset-bottom),0.75rem)]"
+          >
+            <div
+              ref={barTrackRef}
+              onPointerDown={(event) => {
+                draggingBarRef.current = true
+                event.currentTarget.setPointerCapture(event.pointerId)
+                updateSceneFromPointer(event.clientX)
+              }}
+              onPointerMove={(event) => {
+                if (!draggingBarRef.current) return
+                updateSceneFromPointer(event.clientX)
+              }}
+              onPointerUp={() => {
+                draggingBarRef.current = false
+              }}
+              onPointerCancel={() => {
+                draggingBarRef.current = false
+              }}
+              className="relative grid touch-none grid-cols-3 rounded-2xl border border-[var(--app-border)] bg-[var(--app-card)] p-1 select-none"
+            >
+              <span
+                aria-hidden="true"
+                style={{ transform: `translateX(${sceneIndex * 100}%)` }}
+                className="pointer-events-none absolute top-1 bottom-1 left-1 w-[calc((100%-0.5rem)/3)] rounded-xl bg-emerald-600 shadow-sm transition-transform duration-200 ease-out"
+              />
+
+              {SCENES.map((item) => {
+                const active = scene === item.id
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    aria-current={active ? 'page' : undefined}
+                    onClick={() => setScene(item.id)}
+                    className={`relative z-10 flex items-center justify-center rounded-xl py-2.5 text-xs font-semibold transition-colors ${
+                      active ? 'text-white' : 'text-slate-500 dark:text-slate-400'
+                    }`}
+                  >
+                    <span>{t(item.labelKey)}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </nav>
+        </div>
       </div>
-    </div>
+    </I18nContext>
   )
 }
 

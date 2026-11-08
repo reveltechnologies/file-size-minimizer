@@ -1,10 +1,6 @@
 import type { ImageFormat } from '@revel/core'
+import { useI18n } from '../lib/i18n'
 import { choiceClass } from './styles'
-
-const FORMATS: { format: ImageFormat; label: string; detail: string }[] = [
-  { format: 'jpeg', label: 'JPG', detail: 'Smaller' },
-  { format: 'png', label: 'PNG', detail: 'Transparent' },
-]
 
 interface ImageFormatPickerProps {
   format: ImageFormat
@@ -13,13 +9,19 @@ interface ImageFormatPickerProps {
 }
 
 export function ImageFormatPicker({ format, transparent, onChange }: ImageFormatPickerProps) {
+  const { t } = useI18n()
+  const formats: { format: ImageFormat; label: string; detail: string }[] = [
+    { format: 'jpeg', label: 'JPG', detail: t('format.smaller') },
+    { format: 'png', label: 'PNG', detail: t('format.transparent') },
+  ]
+
   return (
     <fieldset>
       <legend className="mb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
-        Format
+        {t('format.title')}
       </legend>
       <div className="grid grid-cols-2 gap-2">
-        {FORMATS.map((option) => (
+        {formats.map((option) => (
           <button
             key={option.format}
             type="button"
@@ -34,7 +36,7 @@ export function ImageFormatPicker({ format, transparent, onChange }: ImageFormat
       </div>
       {format === 'jpeg' && transparent && (
         <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
-          Transparent areas become white in JPG.
+          {t('format.transparentWarning')}
         </p>
       )}
     </fieldset>

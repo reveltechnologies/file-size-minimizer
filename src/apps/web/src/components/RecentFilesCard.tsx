@@ -1,5 +1,6 @@
 import { formatBytes } from '@revel/core'
 import type { HistoryEntry } from '../lib/historyStore'
+import { useI18n } from '../lib/i18n'
 import { downloadBlob } from '../lib/saveFile'
 import type { OutputLocationMode } from '../lib/settingsStore'
 import { CARD, SUBTLE_BOX } from './styles'
@@ -19,6 +20,7 @@ export function RecentFilesCard({
   onOpen,
   onClear,
 }: RecentFilesCardProps) {
+  const { t } = useI18n()
   if (entries.length === 0) return null
 
   return (
@@ -30,8 +32,8 @@ export function RecentFilesCard({
         <button
           type="button"
           onClick={onClear}
-          aria-label="Clear history"
-          title="Clear"
+          aria-label={t('common.clear')}
+          title={t('common.clear')}
           className="rounded-lg p-1 text-slate-500 active:opacity-70 dark:text-slate-400"
         >
           <svg
@@ -74,8 +76,8 @@ export function RecentFilesCard({
                   <button
                     type="button"
                     onClick={() => onOpen(item)}
-                    aria-label={`View ${item.fileName}`}
-                    title="View"
+                    aria-label={`${t('common.view')} ${item.fileName}`}
+                    title={t('common.view')}
                     className="flex size-8 items-center justify-center rounded-xl border border-[var(--app-border)] active:scale-95"
                   >
                     <svg
@@ -96,8 +98,8 @@ export function RecentFilesCard({
                 <button
                   type="button"
                   onClick={() => void downloadBlob(item.blob, item.fileName, outputLocationMode)}
-                  aria-label={`Download ${item.fileName}`}
-                  title="Download"
+                  aria-label={`${t('common.download')} ${item.fileName}`}
+                  title={t('common.download')}
                   className="flex size-8 items-center justify-center rounded-xl bg-emerald-600 text-white active:scale-95"
                 >
                   <svg

@@ -1,6 +1,7 @@
 import { formatBytes } from '@revel/core'
 import { useEffect, useMemo, useState } from 'react'
 import type { HistoryEntry } from '../lib/historyStore'
+import { useI18n } from '../lib/i18n'
 import { downloadBlob } from '../lib/saveFile'
 import type { OutputLocationMode } from '../lib/settingsStore'
 import { RecentFilesCard } from './RecentFilesCard'
@@ -160,6 +161,7 @@ export function FileViewer({
   onFileViewed,
   onClearViewed,
 }: FileViewerProps) {
+  const { t } = useI18n()
   const [dragging, setDragging] = useState(false)
   const [state, setState] = useState<LoadedFileState | null>(null)
   const [wrapLines, setWrapLines] = useState(true)
@@ -357,14 +359,14 @@ export function FileViewer({
               <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
             </svg>
           </span>
-          <span className="text-base font-bold tracking-tight">Open File</span>
+          <span className="text-base font-bold tracking-tight">{t('viewer.openFile')}</span>
           <span className="text-xs text-slate-500 dark:text-slate-400">
-            TXT · JSON · CSV · Code · Media · PDF
+            {t('viewer.supportedTypes')}
           </span>
         </label>
 
         <RecentFilesCard
-          title="Recent"
+          title={t('common.recent')}
           entries={recentViewed}
           outputLocationMode={outputLocationMode}
           onOpen={handleOpenFromHistory}
@@ -391,8 +393,8 @@ export function FileViewer({
           <button
             type="button"
             onClick={() => void downloadBlob(state.file, state.file.name, outputLocationMode)}
-            aria-label="Download"
-            title="Download"
+            aria-label={t('common.download')}
+            title={t('common.download')}
             className="flex size-8 items-center justify-center rounded-xl bg-emerald-600 text-white active:scale-95"
           >
             <svg
@@ -411,8 +413,8 @@ export function FileViewer({
           <button
             type="button"
             onClick={() => setState(null)}
-            aria-label="Close file"
-            title="Close"
+            aria-label={t('common.close')}
+            title={t('common.close')}
             className="flex size-8 items-center justify-center rounded-xl border border-[var(--app-border)] active:scale-95"
           >
             <svg
@@ -433,7 +435,7 @@ export function FileViewer({
 
       {state.loading ? (
         <div className="my-auto py-12 text-center text-xs text-slate-500 dark:text-slate-400">
-          Loading…
+          {t('common.loading')}
         </div>
       ) : state.error ? (
         <div className="rounded-2xl border border-red-300 bg-red-50 px-3.5 py-3 text-xs text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200">
@@ -464,7 +466,7 @@ export function FileViewer({
         <div className="flex flex-1 flex-col gap-2.5">
           {state.pdfInfo && (
             <div className={`${SUBTLE_BOX} flex items-center justify-between px-3 py-2 text-xs`}>
-              <span>{state.pdfInfo.pageCount} pages</span>
+              <span>{t('viewer.pages', { count: state.pdfInfo.pageCount })}</span>
               {state.pdfInfo.title && <span className="truncate">{state.pdfInfo.title}</span>}
             </div>
           )}
@@ -486,7 +488,7 @@ export function FileViewer({
                   onClick={() => setCsvMode(csvMode === 'table' ? 'raw' : 'table')}
                   className="rounded-xl border border-[var(--app-border)] bg-[var(--app-subtle)] px-2.5 py-1 text-xs font-medium"
                 >
-                  {csvMode === 'table' ? 'Raw' : 'Table'}
+                  {csvMode === 'table' ? t('viewer.raw') : t('viewer.table')}
                 </button>
               )}
               {state.kind === 'json' && (
@@ -495,7 +497,7 @@ export function FileViewer({
                   onClick={() => setPrettyJson(!prettyJson)}
                   className="rounded-xl border border-[var(--app-border)] bg-[var(--app-subtle)] px-2.5 py-1 text-xs font-medium"
                 >
-                  {prettyJson ? 'Min' : 'Pretty'}
+                  {prettyJson ? t('viewer.min') : t('viewer.pretty')}
                 </button>
               )}
               {state.kind === 'binary' && (
@@ -504,7 +506,7 @@ export function FileViewer({
                   onClick={() => setBinaryMode(binaryMode === 'text' ? 'hex' : 'text')}
                   className="rounded-xl border border-[var(--app-border)] bg-[var(--app-subtle)] px-2.5 py-1 text-xs font-medium"
                 >
-                  {binaryMode === 'text' ? 'Hex' : 'Text'}
+                  {binaryMode === 'text' ? t('viewer.hex') : t('viewer.text')}
                 </button>
               )}
               <button
@@ -512,7 +514,7 @@ export function FileViewer({
                 onClick={() => setWrapLines(!wrapLines)}
                 className="rounded-xl border border-[var(--app-border)] bg-[var(--app-subtle)] px-2.5 py-1 text-xs font-medium"
               >
-                {wrapLines ? 'Unwrap' : 'Wrap'}
+                {wrapLines ? t('viewer.unwrap') : t('viewer.wrap')}
               </button>
               <button
                 type="button"
@@ -530,13 +532,13 @@ export function FileViewer({
               onClick={() => void handleCopy()}
               className="rounded-xl bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-500"
             >
-              {copied ? 'Copied' : 'Copy'}
+              {copied ? t('viewer.copied') : t('viewer.copy')}
             </button>
           </div>
 
           <input
             type="search"
-            placeholder="Search…"
+            placeholder={t('viewer.search')}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             className="w-full rounded-xl border border-[var(--app-border)] bg-[var(--app-subtle)] px-3 py-2 text-xs"
@@ -580,15 +582,20 @@ export function FileViewer({
             >
               {state.kind === 'binary' && binaryMode === 'hex'
                 ? state.hexDump
-                : displayedText || '(Empty)'}
+                : displayedText || t('viewer.empty')}
             </pre>
           )}
 
           <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
             <span>
-              {lineCount.toLocaleString()} lines · {displayedText.length.toLocaleString()} chars
+              {t('viewer.stats', {
+                lines: lineCount.toLocaleString(),
+                chars: displayedText.length.toLocaleString(),
+              })}
             </span>
-            {state.truncated && <span>{formatBytes(MAX_TEXT_PREVIEW_BYTES)} max</span>}
+            {state.truncated && (
+              <span>{t('viewer.maxPreview', { size: formatBytes(MAX_TEXT_PREVIEW_BYTES) })}</span>
+            )}
           </div>
         </div>
       )}

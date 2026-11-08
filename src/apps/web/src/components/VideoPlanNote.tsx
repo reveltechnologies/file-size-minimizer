@@ -1,4 +1,5 @@
 import { formatBytes, pickOutputSize, type BitratePlan } from '@revel/core'
+import { useI18n } from '../lib/i18n'
 import type { VideoInfo } from '../lib/probeVideo'
 import { WARNING } from './styles'
 
@@ -19,12 +20,13 @@ export function VideoPlanNote({
   allowBlurry,
   onAllowBlurryChange,
 }: VideoPlanNoteProps) {
+  const { t } = useI18n()
   const duration = formatDuration(info.durationSec)
 
   if (!plan.possible) {
     return (
       <p className={WARNING}>
-        {duration} is too long for {formatBytes(maxBytes)}. Increase target size.
+        {t('video.tooLong', { duration, size: formatBytes(maxBytes) })}
       </p>
     )
   }
@@ -34,7 +36,11 @@ export function VideoPlanNote({
     return (
       <div className={`${WARNING} flex flex-col gap-2`}>
         <p>
-          Low quality ({plan.videoKbps} kbps · {size.width}×{size.height}).
+          {t('video.lowQuality', {
+            kbps: plan.videoKbps,
+            width: size.width,
+            height: size.height,
+          })}
         </p>
         <label className="flex cursor-pointer items-center gap-2 font-medium">
           <input
@@ -43,7 +49,7 @@ export function VideoPlanNote({
             onChange={(event) => onAllowBlurryChange(event.target.checked)}
             className="size-4 shrink-0 accent-amber-600"
           />
-          <span>Allow low quality</span>
+          <span>{t('video.allowLowQuality')}</span>
         </label>
       </div>
     )

@@ -1,5 +1,6 @@
 import { ACCEPTED_EXTENSIONS } from '@revel/core'
 import { useState } from 'react'
+import { useI18n } from '../lib/i18n'
 
 const ACCEPT = ACCEPTED_EXTENSIONS.map((ext) => `.${ext}`).join(',')
 
@@ -8,6 +9,7 @@ interface DropZoneProps {
 }
 
 export function DropZone({ onFiles }: DropZoneProps) {
+  const { t } = useI18n()
   const [dragging, setDragging] = useState(false)
 
   return (
@@ -54,8 +56,10 @@ export function DropZone({ onFiles }: DropZoneProps) {
           <path d="M12 16V4m0 0-4 4m4-4 4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
         </svg>
       </span>
-      <span className="text-base font-bold tracking-tight">Select File</span>
-      <span className="text-xs text-slate-500 dark:text-slate-400">Video · Photo · PDF</span>
+      <span className="text-base font-bold tracking-tight">{t('dropzone.selectFile')}</span>
+      <span className="text-xs text-slate-500 dark:text-slate-400">
+        {t('dropzone.supportedTypes')}
+      </span>
     </label>
   )
 }

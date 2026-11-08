@@ -46,3 +46,14 @@ Please be respectful, constructive, and collaborative in all interactions within
 
 - Ensure existing workflows and automated checks pass.
 - Update documentation and changelogs when introducing new features or breaking changes.
+
+---
+
+## Contributing Translations
+
+All UI strings are stored in JSON locale files inside [`src/apps/web/src/locales/`](src/apps/web/src/locales):
+
+- [`en_us.json`](src/apps/web/src/locales/en_us.json) — English (US)
+- [`tr_tr.json`](src/apps/web/src/locales/tr_tr.json) — Turkish (TR)
+
+To add a new language, copy `en_us.json` to `<language>_<region>.json` (e.g. `de_de.json`), update its `_meta` block (`code`, `name`, `nativeName`), and translate the values. New `.json` files in `src/apps/web/src/locales/` are automatically added to the in-app Language selector.

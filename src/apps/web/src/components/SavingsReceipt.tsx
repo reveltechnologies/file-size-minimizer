@@ -1,6 +1,7 @@
 import { formatBytes } from '@revel/core'
 import { useMemo } from 'react'
 import type { CompressResult } from '../engines'
+import { useI18n } from '../lib/i18n'
 import { canShareFile, downloadBlob, shareBlob } from '../lib/saveFile'
 import type { OutputLocationMode } from '../lib/settingsStore'
 import { CARD, PRIMARY_BUTTON, SECONDARY_BUTTON } from './styles'
@@ -20,6 +21,7 @@ export function SavingsReceipt({
   outputLocationMode,
   onReset,
 }: SavingsReceiptProps) {
+  const { t } = useI18n()
   const { blob, fileName } = result
   const savedPercent = Math.max(0, Math.floor((1 - blob.size / originalBytes) * 100))
   const fits = blob.size <= maxBytes
@@ -86,7 +88,7 @@ export function SavingsReceipt({
 
       {!fits && (
         <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
-          Smallest possible ({formatBytes(maxBytes)} limit)
+          {t('receipt.smallestPossible', { size: formatBytes(maxBytes) })}
         </p>
       )}
 
@@ -110,7 +112,7 @@ export function SavingsReceipt({
           >
             <path d="M12 4v12m0 0-4-4m4 4 4-4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
           </svg>
-          <span>Save</span>
+          <span>{t('common.save')}</span>
         </button>
         {shareable && (
           <button
@@ -118,11 +120,11 @@ export function SavingsReceipt({
             onClick={() => void shareBlob(blob, fileName).catch(console.error)}
             className={SECONDARY_BUTTON}
           >
-            Share
+            {t('common.share')}
           </button>
         )}
         <button type="button" onClick={onReset} className={SECONDARY_BUTTON}>
-          Done
+          {t('common.done')}
         </button>
       </div>
     </section>

@@ -1,7 +1,11 @@
-import { DEFAULT_OPTIONS } from '@revel/core'
+import {
+  AVAILABLE_LOCALES,
+  useI18n,
+  type TranslationKey,
+} from '../lib/i18n'
 import { pickFixedDirectory } from '../lib/saveFile'
 import {
-  DEFAULT_SETTINGS,
+  createDefaultSettings,
   THEMES,
   type AppSettings,
   type DefaultPhotoFormat,
@@ -23,16 +27,10 @@ interface SettingsPanelProps {
   onClearAllHistory: () => void
 }
 
-const PHOTO_FORMAT_CHOICES: { id: DefaultPhotoFormat; label: string }[] = [
-  { id: 'auto', label: 'Auto' },
-  { id: 'jpeg', label: 'JPG' },
-  { id: 'png', label: 'PNG' },
-]
-
-const LOCATION_CHOICES: { id: OutputLocationMode; label: string }[] = [
-  { id: 'same', label: 'Same folder' },
-  { id: 'ask', label: 'Ask every time' },
-  { id: 'fixed', label: 'Fixed folder' },
+const LOCATION_CHOICES: { id: OutputLocationMode; labelKey: TranslationKey }[] = [
+  { id: 'same', labelKey: 'settings.location.same' },
+  { id: 'ask', labelKey: 'settings.location.ask' },
+  { id: 'fixed', labelKey: 'settings.location.fixed' },
 ]
 
 export function SettingsPanel({
@@ -41,7 +39,9 @@ export function SettingsPanel({
   storedHistoryCount,
   onClearAllHistory,
 }: SettingsPanelProps) {
+  const { t } = useI18n()
   const {
+    language,
     theme,
     options,
     defaultPhotoFormat,
@@ -52,11 +52,14 @@ export function SettingsPanel({
     fileSuffix,
   } = settings
 
+  const photoFormatChoices: { id: DefaultPhotoFormat; label: string }[] = [
+    { id: 'auto', label: t('settings.photoAuto') },
+    { id: 'jpeg', label: 'JPG' },
+    { id: 'png', label: 'PNG' },
+  ]
+
   function handleResetDefaults() {
-    onChangeSettings({
-      ...DEFAULT_SETTINGS,
-      options: { ...DEFAULT_OPTIONS },
-    })
+    onChangeSettings(createDefaultSettings())
   }
 
   async function handlePickFolder() {
@@ -72,10 +75,34 @@ export function SettingsPanel({
 
   return (
     <div className="flex flex-1 flex-col gap-3">
+      {/* Language selection */}
+      <section className={`${CARD} flex flex-col gap-2.5`}>
+        <h2 className="text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
+          {t('settings.language')}
+        </h2>
+        <div className="grid grid-cols-2 gap-2">
+          {AVAILABLE_LOCALES.map((loc) => {
+            const active = language === loc.code
+            return (
+              <button
+                key={loc.code}
+                type="button"
+                aria-pressed={active}
+                onClick={() => onChangeSettings({ ...settings, language: loc.code })}
+                className={`${choiceClass(active)} flex min-h-11 items-center justify-between px-3 py-2 text-xs font-semibold`}
+              >
+                <span className="truncate">{loc.nativeName}</span>
+                <span className="font-mono text-[10px] uppercase opacity-75">{loc.code}</span>
+              </button>
+            )
+          })}
+        </div>
+      </section>
+
       {/* Theme selection */}
       <section className={`${CARD} flex flex-col gap-2.5`}>
         <h2 className="text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
-          Theme
+          {t('settings.theme')}
         </h2>
         <div className="grid grid-cols-2 gap-2">
           {THEMES.map((item) => {
@@ -105,7 +132,7 @@ export function SettingsPanel({
                   style={{ backgroundColor: item.swatch }}
                   className="size-3.5 shrink-0 rounded-full border border-white/30"
                 />
-                <span className="truncate">{item.label}</span>
+                <span className="truncate">{t(item.labelKey)}</span>
               </button>
             )
           })}
@@ -115,7 +142,7 @@ export function SettingsPanel({
       {/* Output Folder & File Naming */}
       <section className={`${CARD} flex flex-col gap-3`}>
         <h2 className="text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
-          Output Folder
+          {t('settings.outputFolder')}
         </h2>
         <div className="grid grid-cols-3 gap-2">
           {LOCATION_CHOICES.map((item) => (
@@ -126,7 +153,7 @@ export function SettingsPanel({
               onClick={() => onChangeSettings({ ...settings, outputLocationMode: item.id })}
               className={`${choiceClass(outputLocationMode === item.id)} flex min-h-11 items-center justify-center px-2 py-2 text-center text-xs font-semibold`}
             >
-              {item.label}
+              {t(item.labelKey)}
             </button>
           ))}
         </div>
@@ -148,7 +175,7 @@ export function SettingsPanel({
               </svg>
               <input
                 type="text"
-                aria-label="Folder name"
+                aria-label={t('settings.outputFolder')}
                 value={fixedFolderName}
                 onChange={(e) =>
                   onChangeSettings({ ...settings, fixedFolderName: e.target.value })
@@ -161,17 +188,19 @@ export function SettingsPanel({
               onClick={() => void handlePickFolder()}
               className="shrink-0 rounded-xl bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white active:scale-95"
             >
-              Browse
+              {t('settings.browse')}
             </button>
           </div>
         )}
 
         <h2 className="pt-1 text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
-          File Naming
+          {t('settings.fileNaming')}
         </h2>
         <div className="grid grid-cols-2 gap-2">
           <label className="flex flex-col gap-1">
-            <span className="text-[11px] text-slate-500 dark:text-slate-400">Prefix</span>
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+              {t('settings.prefix')}
+            </span>
             <input
               type="text"
               placeholder="min_"
@@ -181,7 +210,9 @@ export function SettingsPanel({
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[11px] text-slate-500 dark:text-slate-400">Suffix</span>
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+              {t('settings.suffix')}
+            </span>
             <input
               type="text"
               placeholder="-fit"
@@ -199,37 +230,37 @@ export function SettingsPanel({
       {/* Defaults & History */}
       <section className={`${CARD} flex flex-col gap-2.5`}>
         <h2 className="text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
-          Defaults
+          {t('settings.defaults')}
         </h2>
         <SettingRow
-          label="Remove metadata"
+          label={t('settings.removeMetadata')}
           checked={options.stripHiddenData}
           onChange={(stripHiddenData) =>
             onChangeSettings({ ...settings, options: { ...options, stripHiddenData } })
           }
         />
         <SettingRow
-          label="Smart video optimize"
+          label={t('settings.smartVideoOptimize')}
           checked={options.smartOptimize}
           onChange={(smartOptimize) =>
             onChangeSettings({ ...settings, options: { ...options, smartOptimize } })
           }
         />
         <SettingRow
-          label="Mute video audio"
+          label={t('settings.muteVideoAudio')}
           checked={options.muteAudio}
           onChange={(muteAudio) =>
             onChangeSettings({ ...settings, options: { ...options, muteAudio } })
           }
         />
         <SettingRow
-          label="Save last 10 files"
+          label={t('settings.saveLast10')}
           checked={rememberHistory}
           onChange={(checked) => onChangeSettings({ ...settings, rememberHistory: checked })}
         />
 
         <div className="grid grid-cols-3 gap-2 pt-1">
-          {PHOTO_FORMAT_CHOICES.map((item) => (
+          {photoFormatChoices.map((item) => (
             <button
               key={item.id}
               type="button"
@@ -249,7 +280,7 @@ export function SettingsPanel({
               onClick={onClearAllHistory}
               className={`${SECONDARY_BUTTON} py-2.5 text-xs`}
             >
-              Clear history ({storedHistoryCount})
+              {t('settings.clearHistory', { count: storedHistoryCount })}
             </button>
           )}
           <button
@@ -257,7 +288,7 @@ export function SettingsPanel({
             onClick={handleResetDefaults}
             className={`${SECONDARY_BUTTON} py-2.5 text-xs`}
           >
-            Reset
+            {t('common.reset')}
           </button>
         </div>
       </section>
@@ -266,9 +297,9 @@ export function SettingsPanel({
       <section className={`${CARD} flex flex-col gap-2.5 text-xs`}>
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="font-semibold">Open-Source · 100% Local</p>
+            <p className="font-semibold">{t('settings.openSourceLocal')}</p>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              No external data transfer · v0.5.0-beta.1
+              {t('settings.noExternalData')} · v0.5.0-beta.1
             </p>
           </div>
           <a
@@ -304,7 +335,7 @@ export function SettingsPanel({
             >
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
-            <span>Security</span>
+            <span>{t('settings.security')}</span>
           </a>
           <a
             href={TERMS_OF_USE_URL}
@@ -325,7 +356,7 @@ export function SettingsPanel({
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
               <path d="M14 2v6h6M16 13H8M16 17H8" />
             </svg>
-            <span>Terms</span>
+            <span>{t('settings.terms')}</span>
           </a>
           <a
             href={LICENSE_URL}

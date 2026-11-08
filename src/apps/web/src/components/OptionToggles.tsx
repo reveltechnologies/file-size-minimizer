@@ -1,4 +1,5 @@
 import type { CompressOptions, FileCategory } from '@revel/core'
+import { useI18n } from '../lib/i18n'
 
 interface OptionTogglesProps {
   category: FileCategory
@@ -7,28 +8,30 @@ interface OptionTogglesProps {
 }
 
 export function OptionToggles({ category, options, onChange }: OptionTogglesProps) {
+  const { t } = useI18n()
+
   return (
     <fieldset className="flex flex-col gap-2">
       <legend className="mb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
-        Options
+        {t('options.title')}
       </legend>
       <Toggle
-        label="Remove metadata"
-        detail="EXIF, GPS, author"
+        label={t('options.removeMetadata')}
+        detail={t('options.removeMetadataDetail')}
         checked={options.stripHiddenData}
         onChange={(stripHiddenData) => onChange({ ...options, stripHiddenData })}
       />
       {category === 'video' && (
         <>
           <Toggle
-            label="Smart optimize"
-            detail="Auto resolution & FPS"
+            label={t('options.smartOptimize')}
+            detail={t('options.smartOptimizeDetail')}
             checked={options.smartOptimize}
             onChange={(smartOptimize) => onChange({ ...options, smartOptimize })}
           />
           <Toggle
-            label="Mute audio"
-            detail="Remove sound track"
+            label={t('options.muteAudio')}
+            detail={t('options.muteAudioDetail')}
             checked={options.muteAudio}
             onChange={(muteAudio) => onChange({ ...options, muteAudio })}
           />

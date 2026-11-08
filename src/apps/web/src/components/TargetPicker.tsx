@@ -1,6 +1,18 @@
-import { formatBytes, presetsFor, type FileCategory } from '@revel/core'
+import { formatBytes, presetsFor, type FileCategory, type PresetId } from '@revel/core'
+import { useI18n, type TranslationKey } from '../lib/i18n'
 import type { SizeUnit, Target } from '../lib/target'
 import { choiceClass } from './styles'
+
+const PRESET_KEY: Record<PresetId, TranslationKey> = {
+  discord: 'preset.discord',
+  whatsapp: 'preset.whatsapp',
+  email: 'preset.gmail',
+  'portal-id': 'preset.strict_id',
+  'standard-form': 'preset.standard_form',
+  'visa-portal': 'preset.visa_portal',
+  'standard-doc': 'preset.standard_doc',
+  'email-packet': 'preset.email_packet',
+}
 
 interface TargetPickerProps {
   category: FileCategory
@@ -9,12 +21,13 @@ interface TargetPickerProps {
 }
 
 export function TargetPicker({ category, target, onChange }: TargetPickerProps) {
+  const { t } = useI18n()
   const isCustom = target.choice === 'custom'
 
   return (
     <fieldset>
       <legend className="mb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
-        Fit under
+        {t('shrink.fitUnder')}
       </legend>
       <div className="grid grid-cols-2 gap-2">
         {presetsFor(category).map((preset) => (
@@ -25,7 +38,9 @@ export function TargetPicker({ category, target, onChange }: TargetPickerProps) 
             onClick={() => onChange({ ...target, choice: preset.id })}
             className={choiceClass(target.choice === preset.id)}
           >
-            <span className="block truncate font-semibold">{preset.label}</span>
+            <span className="block truncate font-semibold">
+              {t(PRESET_KEY[preset.id as PresetId])}
+            </span>
             <span className="block text-xs opacity-80">&lt; {formatBytes(preset.maxBytes)}</span>
           </button>
         ))}
@@ -35,8 +50,8 @@ export function TargetPicker({ category, target, onChange }: TargetPickerProps) 
           onClick={() => onChange({ ...target, choice: 'custom' })}
           className={choiceClass(isCustom)}
         >
-          <span className="block font-semibold">Custom</span>
-          <span className="block text-xs opacity-80">Your limit</span>
+          <span className="block font-semibold">{t('shrink.custom')}</span>
+          <span className="block text-xs opacity-80">{t('shrink.yourLimit')}</span>
         </button>
       </div>
 
@@ -47,8 +62,8 @@ export function TargetPicker({ category, target, onChange }: TargetPickerProps) 
             inputMode="decimal"
             min="0"
             step="any"
-            placeholder="e.g. 8"
-            aria-label="Custom size limit"
+            placeholder="8"
+            aria-label={t('shrink.custom')}
             autoFocus
             value={target.customValue}
             onChange={(event) => onChange({ ...target, customValue: event.target.value })}
