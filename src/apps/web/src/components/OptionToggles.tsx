@@ -15,7 +15,9 @@ interface OptionTogglesProps {
 export function OptionToggles({ category, options, onChange }: OptionTogglesProps) {
   return (
     <fieldset className="flex flex-col gap-2">
-      <legend className="mb-2 text-sm font-semibold">Unseen data</legend>
+      <legend className="mb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
+        Options &amp; Privacy
+      </legend>
       <Toggle
         label="Strip hidden data & GPS"
         detail={STRIP_DETAILS[category]}
@@ -51,17 +53,17 @@ interface ToggleProps {
 
 function Toggle({ label, detail, checked, onChange }: ToggleProps) {
   return (
-    <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-3 transition hover:border-blue-400 dark:border-slate-800">
+    <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 px-3.5 py-3 transition active:scale-[0.99] dark:border-slate-800 dark:bg-slate-800/50">
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-medium">{label}</span>
+        <span className="block text-xs text-slate-500 dark:text-slate-400">{detail}</span>
+      </span>
       <input
         type="checkbox"
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
-        className="mt-0.5 size-4 accent-blue-600"
+        className="size-5 shrink-0 accent-blue-600"
       />
-      <span>
-        <span className="block text-sm font-medium">{label}</span>
-        <span className="block text-xs text-slate-500 dark:text-slate-400">{detail}</span>
-      </span>
     </label>
   )
 }

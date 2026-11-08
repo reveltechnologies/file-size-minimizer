@@ -22,33 +22,42 @@ export function SavingsReceipt({ originalBytes, maxBytes, result, onReset }: Sav
   const shareable = useMemo(() => canShareFile(blob, fileName), [blob, fileName])
 
   return (
-    <section className={`${CARD} text-center`}>
+    <section className={`${CARD} my-auto flex flex-col items-center py-6 text-center`}>
+      <span
+        className={`mb-3 flex size-14 items-center justify-center rounded-2xl text-2xl ${
+          fits
+            ? 'bg-green-500/15 text-green-600 dark:text-green-400'
+            : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+        }`}
+      >
+        {fits ? '✓' : '⚠'}
+      </span>
       <p className="text-xs font-semibold tracking-widest text-slate-500 uppercase dark:text-slate-400">
         Savings receipt
       </p>
-      <p className="mt-3 text-3xl font-bold tabular-nums">
+      <p className="mt-2 text-2xl font-bold tabular-nums">
         {formatBytes(originalBytes)} →{' '}
         <span className={fits ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}>
           {formatBytes(blob.size)}
         </span>
       </p>
-      <p className="mt-2 text-sm">
+      <p className="mt-1.5 text-sm font-medium">
         {savedPercent}% smaller
-        {fits && ` · ✓ Fits under ${formatBytes(maxBytes)}`}
+        {fits && ` · Fits under ${formatBytes(maxBytes)}`}
       </p>
       {!fits && (
-        <p className="mt-2 text-sm text-amber-700 dark:text-amber-300">
-          ⚠ Couldn't get under {formatBytes(maxBytes)}. This is the smallest we could make it.
+        <p className="mt-2 text-xs leading-relaxed text-amber-700 dark:text-amber-300">
+          Couldn't get under {formatBytes(maxBytes)}. This is the smallest we could make it.
         </p>
       )}
-      <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">
+      <p className="mt-1.5 w-full truncate text-xs text-slate-500 dark:text-slate-400">
         {PHOTO_FORMAT[blob.type] && `Saved as ${PHOTO_FORMAT[blob.type]} · `}
         {fileName}
       </p>
 
-      <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
+      <div className="mt-6 flex w-full flex-col gap-2.5">
         <button type="button" onClick={() => downloadBlob(blob, fileName)} className={PRIMARY_BUTTON}>
-          Download
+          Save to device
         </button>
         {shareable && (
           <button

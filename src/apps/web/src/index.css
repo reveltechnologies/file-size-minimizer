@@ -3,4 +3,21 @@
 /* Native controls (select, number input, checkbox) follow the OS theme. */
 :root {
   color-scheme: light dark;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  height: 100%;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Portrait-only lock overlay when a physical phone/tablet is rotated to landscape. */
+@media (orientation: landscape) and (max-height: 560px) and (hover: none) and (pointer: coarse) {
+  .portrait-lock-overlay {
+    display: flex !important;
+  }
 }

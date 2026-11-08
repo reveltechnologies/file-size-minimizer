@@ -201,7 +201,7 @@ def main() -> int:
                 browser_bin,
                 f"--app={url}",
                 f"--user-data-dir={temp_profile_dir}",
-                "--window-size=1100,820",
+                "--window-size=412,880",
                 "--no-first-run",
                 "--no-default-browser-check",
                 "--disable-background-mode",

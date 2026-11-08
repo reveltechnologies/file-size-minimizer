@@ -16,7 +16,9 @@ interface ImageFormatPickerProps {
 export function ImageFormatPicker({ format, transparent, onChange }: ImageFormatPickerProps) {
   return (
     <fieldset>
-      <legend className="mb-2 text-sm font-semibold">Save as</legend>
+      <legend className="mb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
+        Save as
+      </legend>
       <div className="grid grid-cols-2 gap-2">
         {FORMATS.map((option) => (
           <button
@@ -26,16 +28,16 @@ export function ImageFormatPicker({ format, transparent, onChange }: ImageFormat
             onClick={() => onChange(option.format)}
             className={choiceClass(format === option.format)}
           >
-            <span className="block font-medium">{option.label}</span>
-            <span className="block opacity-75">{option.detail}</span>
+            <span className="block font-semibold">{option.label}</span>
+            <span className="block text-xs opacity-80">{option.detail}</span>
           </button>
         ))}
       </div>
       <p
-        className={`mt-2 text-sm ${
+        className={`mt-2 text-xs leading-relaxed ${
           format === 'jpeg' && transparent
             ? 'text-amber-700 dark:text-amber-300'
-            : 'text-slate-600 dark:text-slate-400'
+            : 'text-slate-500 dark:text-slate-400'
         }`}
       >
         {format === 'png'

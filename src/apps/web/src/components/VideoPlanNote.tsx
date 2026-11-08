@@ -34,28 +34,28 @@ export function VideoPlanNote({
   const size = smartOptimize ? pickOutputSize(plan.videoKbps, info) : info
   if (!plan.feasible) {
     return (
-      <div className={`${WARNING} flex flex-col gap-3`}>
+      <div className={`${WARNING} flex flex-col gap-2.5`}>
         <p>
           ⚠ A {duration} video will look <strong>very blurry</strong> under {formatBytes(maxBytes)}:
           only {plan.videoKbps} kbps for the picture, at {size.width}×{size.height}. {tip} gives a
           sharper result.
           {!smartOptimize && ' Turning on Smart visual optimization also helps it fit.'}
         </p>
-        <label className="flex cursor-pointer items-center gap-2 font-medium">
+        <label className="flex cursor-pointer items-center gap-2.5 pt-0.5 font-medium">
           <input
             type="checkbox"
             checked={allowBlurry}
             onChange={(event) => onAllowBlurryChange(event.target.checked)}
-            className="size-4 accent-amber-600"
+            className="size-4 shrink-0 accent-amber-600"
           />
-          Shrink anyway, I'm OK with a blurry video
+          <span>Shrink anyway, I'm OK with a blurry video</span>
         </label>
       </div>
     )
   }
 
   return (
-    <p className="text-sm text-slate-600 dark:text-slate-400">
+    <p className="text-xs text-slate-500 dark:text-slate-400">
       Plan: {duration} at {plan.videoKbps} kbps video
       {plan.audioKbps > 0 ? ` + ${plan.audioKbps} kbps audio` : ', no audio'} · {size.width}×{size.height}
     </p>

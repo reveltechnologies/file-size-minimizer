@@ -24,17 +24,17 @@ export function ProgressPanel({ title, step, ratio, status, onCancel }: Progress
   const done = step === 'done'
 
   return (
-    <section className={`${CARD} flex flex-col gap-5`}>
-      <p className="text-center text-lg font-semibold">{done ? 'All done!' : title}</p>
+    <section className={`${CARD} my-auto flex flex-col gap-5 py-6`}>
+      <p className="text-center text-lg font-bold tracking-tight">{done ? 'All done!' : title}</p>
 
       <ProgressBar ratio={shown} label={done ? 'Your file is ready' : status || 'Starting…'} />
 
-      <ol className="flex items-center gap-2 text-xs font-medium">
+      <ol className="flex items-center gap-1.5 text-xs font-medium">
         {STEPS.map(({ step: s, label }, i) => {
           const finished = i < current || done
           const active = i === current && !done
           return (
-            <li key={s} className="flex flex-1 items-center gap-2 last:flex-none">
+            <li key={s} className="flex flex-1 items-center gap-1.5 last:flex-none">
               <span
                 aria-current={active ? 'step' : undefined}
                 className={`flex items-center gap-1.5 ${
@@ -46,7 +46,7 @@ export function ProgressPanel({ title, step, ratio, status, onCancel }: Progress
                 }`}
               >
                 <span
-                  className={`flex size-6 shrink-0 items-center justify-center rounded-full ${
+                  className={`flex size-6 shrink-0 items-center justify-center rounded-full text-xs ${
                     finished
                       ? 'bg-green-600 text-white'
                       : active
@@ -70,10 +70,10 @@ export function ProgressPanel({ title, step, ratio, status, onCancel }: Progress
       </ol>
 
       <p className="text-center text-xs text-slate-500 dark:text-slate-400">
-        🔒 Your file never leaves this device. Keep this tab open.
+        🔒 Your file never leaves this phone. Keep the app open.
       </p>
       {!done && (
-        <button type="button" onClick={onCancel} className={`${SECONDARY_BUTTON} self-center`}>
+        <button type="button" onClick={onCancel} className={SECONDARY_BUTTON}>
           Cancel
         </button>
       )}

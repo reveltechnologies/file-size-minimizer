@@ -16,12 +16,15 @@ Add every change here. Pick the version type by how well the app works:
 The release workflow marks alpha, beta and rc versions as pre-releases on GitHub.
 -->
 
-## [0.4.3-beta.1] - 2026-11-08
+## [0.5.0-beta.1] - 2026-11-08
 
 **Type:** Beta. Every feature works and has been tested in Chrome and Edge, but the app isn't public yet.
 
 ### Added
-- `run.py` in the repository root to automatically install dependencies, launch the dev server, open the app in a standalone desktop window, and shut everything down when the window closes.
+- Mobile-first vertical phone UI tailored for all phone screen sizes (compact to tall screens), with sticky app bar, thumb-friendly bottom action bar, and full-width touch controls.
+- Portrait orientation lock via Web App Manifest (`portrait-primary`), Screen Orientation API, and a landscape rotation blocker overlay on mobile devices.
+- Official app logo (`logo.png`) used as the app icon and in the top-left header of the app.
+- `run.py` in the repository root to automatically install dependencies, launch the dev server, open the app in a standalone portrait phone window (`412×880`), and shut everything down when the window closes.
 
 ### Changed
 - Moved all code and workspace files (`apps/`, `packages/`, `package.json`, `package-lock.json`) into `src/` to separate the application code from repository documentation and workflows.
