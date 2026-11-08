@@ -16,6 +16,13 @@ Add every change here. Pick the version type by how well the app works:
 The release workflow marks alpha, beta and rc versions as pre-releases on GitHub.
 -->
 
+## [0.4.3-beta.1] - 2026-11-08
+
+**Type:** Beta. Every feature works and has been tested in Chrome and Edge, but the app isn't public yet.
+
+### Changed
+- Moved all code and workspace files (`apps/`, `packages/`, `package.json`, `package-lock.json`) into `src/` to separate the application code from repository documentation and workflows.
+
 ## [0.4.2-beta.1] - 2026-11-05
 
 **Type:** Beta. Every feature works and has been tested in Chrome and Edge, but the app isn't public yet.

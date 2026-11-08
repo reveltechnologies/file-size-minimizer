@@ -57,6 +57,9 @@ jobs:
     if: needs.config.outputs.enabled == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: src
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -66,6 +69,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: src/package-lock.json
 
       - name: Install dependencies
         run: npm ci

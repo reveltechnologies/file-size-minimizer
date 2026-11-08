@@ -36,23 +36,23 @@ Sizes use decimal units (1 MB = 1,000,000 bytes), the stricter reading of any up
 
 ## Running it locally
 
-You need **Node.js 22 LTS** (Vite 8 needs at least 20.19 or 22.12). Run every command from the repository root.
+You need **Node.js 22 LTS** (Vite 8 needs at least 20.19 or 22.12). Run every command from `src/`.
 
 ```sh
 git clone https://github.com/reveltechnologies/file-size-minimizer.git
-cd file-size-minimizer
+cd file-size-minimizer/src
 npm install
 npm run dev
 ```
 
 Then open the address it prints (usually http://localhost:5173).
 
-> Run `npm install` from the root only, not inside `apps/web`, or the web app can't find `@revel/core`.
+> Run `npm install` from `src/` only, not inside `src/apps/web`, or the web app can't find `@revel/core`.
 
 | Command | What it does |
 |---|---|
 | `npm run dev` | Starts the app with live reload |
-| `npm run build` | Type-checks and builds the production site into `apps/web/dist` |
+| `npm run build` | Type-checks and builds the production site into `src/apps/web/dist` |
 | `npm run preview` | Serves the production build locally |
 | `npm test` | Runs the unit tests for `packages/core` and `apps/web` (Vitest) |
 | `npm run typecheck` | Type-checks `packages/core` |
@@ -67,13 +67,14 @@ Then open the address it prints (usually http://localhost:5173).
 ## Project layout
 
 ```
-apps/web/          React web app (Vite, Tailwind)
-  src/engines/     Browser code that does the shrinking: video, photo, PDF, photos → PDF
-  src/components/  UI pieces: drop zone, target picker, progress, receipt
-packages/core/     Plain TypeScript shared with the upcoming Android app:
-                   size presets, bitrate maths, ffmpeg arguments, JPEG metadata,
-                   photo fitting, PDF page layout (with unit tests)
-docs/              User guide: how to use the app and common questions
+src/
+  apps/web/          React web app (Vite, Tailwind)
+    src/engines/     Browser code that does the shrinking: video, photo, PDF, photos → PDF
+    src/components/  UI pieces: drop zone, target picker, progress, receipt
+  packages/core/     Plain TypeScript shared with the upcoming Android app:
+                     size presets, bitrate maths, ffmpeg arguments, JPEG metadata,
+                     photo fitting, PDF page layout (with unit tests)
+docs/                User guide: how to use the app and common questions
 ```
 
 ### Built with
