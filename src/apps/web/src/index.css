@@ -2,7 +2,6 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Default theme: Dark Green */
 :root,
 :root[data-theme="dark-green"] {
   color-scheme: dark;
@@ -73,7 +72,6 @@ body {
   -webkit-user-select: none;
 }
 
-/* Portrait-only lock overlay when a physical phone/tablet is rotated to landscape. */
 @media (orientation: landscape) and (max-height: 560px) and (hover: none) and (pointer: coarse) {
   .portrait-lock-overlay {
     display: flex !important;

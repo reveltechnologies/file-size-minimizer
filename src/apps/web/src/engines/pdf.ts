@@ -19,7 +19,6 @@ import {
 import { createImageRenderer } from './canvas'
 import type { CompressJob, CompressResult } from './types'
 
-/** Smaller images (logos, signatures) aren't worth the quality risk. */
 const MIN_IMAGE_BYTES = 30_000
 
 const name = (value: string) => PDFName.of(value)
@@ -37,22 +36,20 @@ export async function compressPdf(job: CompressJob): Promise<CompressResult> {
     fileName,
   })
 
-  onStatus('Opening your PDF…')
+  onStatus('Reading PDF…')
   const original = new Uint8Array(await file.arrayBuffer())
   if (original.length <= maxBytes && !options.stripHiddenData) return toResult(original)
 
   let doc: PDFDocument
   try {
-    // updateMetadata: false stops pdf-lib stamping its own Producer and dates.
     doc = await PDFDocument.load(original, { updateMetadata: false })
   } catch {
-    throw new Error("Couldn't open this PDF. It may be damaged or password-protected.")
+    throw new Error("Couldn't open PDF.")
   }
 
   onStep('shrink')
-  onStatus('Tidying up your PDF…')
+  onStatus('Optimizing PDF…')
   if (options.stripHiddenData) stripMetadata(doc)
-  // Drops earlier revisions ("edit history") and anything else no page uses.
   removeUnreachableObjects(doc)
   let bytes = await doc.save({ useObjectStreams: true })
 
@@ -61,24 +58,21 @@ export async function compressPdf(job: CompressJob): Promise<CompressResult> {
   for (const [i, step] of PDF_IMAGE_STEPS.entries()) {
     if (bytes.length <= maxBytes || images.length === 0) break
     signal.throwIfAborted()
-    onStatus(i === 0 ? 'Shrinking the pages…' : 'Fine-tuning the size…')
+    onStatus('Compressing pages…')
     onProgress(i / totalSteps)
     await recompressImages(doc, images, step, signal)
     bytes = await doc.save({ useObjectStreams: true })
   }
   onProgress(1)
 
-  // Only keep our version if it is smaller or had data to remove.
   if (!options.stripHiddenData && bytes.length >= original.length) return toResult(original)
   return toResult(bytes)
 }
 
 function stripMetadata(doc: PDFDocument): void {
-  // Author, title, creator app, producer, dates.
   const info = doc.context.lookup(doc.context.trailerInfo.Info)
   if (info instanceof PDFDict) for (const key of info.keys()) info.delete(key)
 
-  // XMP packets and app-private data (e.g. Illustrator/Acrobat edit state).
   for (const node of [doc.catalog, ...doc.getPages().map((page) => page.node)]) {
     node.delete(name('Metadata'))
     node.delete(name('PieceInfo'))
@@ -113,11 +107,6 @@ function removeUnreachableObjects(doc: PDFDocument): void {
   }
 }
 
-/**
- * JPEG photos/scans in RGB or grayscale: the bulk of most portal PDFs.
- * Skips CMYK, masks, inverted (/Decode) and non-JPEG images, which the
- * browser can't round-trip faithfully.
- */
 function findRecompressibleImages(doc: PDFDocument): PdfImage[] {
   const images: PdfImage[] = []
   for (const [ref, obj] of doc.context.enumerateIndirectObjects()) {
@@ -141,7 +130,6 @@ function hasOnlyFilter(dict: PDFDict, filter: string): boolean {
 function isRgbOrGray(doc: PDFDocument, dict: PDFDict): boolean {
   const colorSpace = dict.lookup(name('ColorSpace'))
   if (colorSpace === name('DeviceRGB') || colorSpace === name('DeviceGray')) return true
-  // [/ICCBased <stream with /N 1 or 3>]
   if (colorSpace instanceof PDFArray && colorSpace.lookup(0) === name('ICCBased')) {
     const profile = doc.context.lookup(colorSpace.get(1))
     const components = profile instanceof PDFStream ? profile.dict.lookup(name('N')) : undefined
@@ -150,7 +138,6 @@ function isRgbOrGray(doc: PDFDocument, dict: PDFDict): boolean {
   return false
 }
 
-/** Re-encodes each image from its original bytes, so passes never compound quality loss. */
 async function recompressImages(
   doc: PDFDocument,
   images: PdfImage[],
@@ -160,7 +147,6 @@ async function recompressImages(
   for (const image of images) {
     signal.throwIfAborted()
     const source = new Blob([image.original.contents.slice()], { type: 'image/jpeg' })
-    // PDF viewers ignore EXIF rotation inside embedded JPEGs, so we must too.
     const bitmap = await createImageBitmap(source, { imageOrientation: 'none' }).catch(() => null)
     if (!bitmap) continue
     try {

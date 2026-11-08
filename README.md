@@ -1,118 +1,74 @@
-# Fit-to-Size & Unseen Data File Shrinker
+# File Size Minimizer
 
-Shrink a video, photo or PDF so it fits an upload limit, and strip the hidden data (GPS, camera details, author names) along the way. Everything runs in your browser: **your files never leave your device.**
+Shrink videos, photos, and PDFs to fit upload limits, strip metadata, and view local files on your device. Everything runs locally: **your files never leave your device.**
 
 Made by [Revel Technologies](https://github.com/reveltechnologies).
 
 ---
 
-## What it does
+## Features
 
-1. **Drop a file** (or several photos).
-2. **Pick where it's going**: Discord, WhatsApp, Gmail, a visa portal… or type a custom limit.
-3. **Get a file that fits**, plus a receipt showing how much smaller it got and what hidden data was removed.
+- **Shrink** videos, photos, and PDFs under presets (`Discord`, `WhatsApp`, `Gmail`, `Portal ID`, `Visa Portal`) or a custom KB/MB target.
+- **Combine photos** into a single A4 PDF sized under your chosen limit.
+- **View** local files directly on your phone (`.txt`, `.json`, `.csv`, `.log`, code files, HEIC, PDF, audio/video, and binary hex/text).
+- **Strip metadata** (EXIF, GPS, camera serials, author tags, and PDF revision history).
+- **Settings**: 5 themes (Dark Green default), English (`en_us`) and Turkish (`tr_tr`) with automatic device language detection, output folder & file naming, and optional local history for the last 10 viewed and 10 shrunk files.
 
 | File type | Accepted formats | Output | Presets |
 |---|---|---|---|
 | Video | MP4, MOV, WebM, MKV, GIF | MP4 | Discord Free 10 MB · WhatsApp 16 MB · Email / Gmail 25 MB |
-| Photo | JPG, PNG, WebP, HEIC / HEIF (iPhone) | JPG, or PNG to keep see-through areas | Strict Portal ID 500 KB · Standard Form 1 MB |
+| Photo | JPG, PNG, WebP, HEIC / HEIF | JPG or PNG | Strict Portal ID 500 KB · Standard Form 1 MB |
 | PDF | PDF | PDF | Visa / Uni Portal 2 MB · Standard Doc 5 MB · Email Packet 10 MB |
-
-**Several photos at once** are combined into one A4 PDF that fits the chosen size.
-
-### Options
-
-- **Remove hidden data** (on by default): GPS location, camera serial numbers, author tags, PDF edit history.
-- **Smart optimize** (video, on by default): HDR → SDR, 60 → 30 FPS, and a lower resolution when the size limit is tight.
-- **Mute audio** (video): drops the sound so the whole size budget goes to the picture.
-
-If a video would look very blurry at the chosen size, the app warns you first and lets you shrink it anyway.
-
-### How sizes are counted
-
-Sizes use decimal units (1 MB = 1,000,000 bytes), the stricter reading of any upload limit. The app aims a little under the limit to be safe, so a 10 MB target usually gives about 9.2–9.9 MB.
 
 ---
 
-## Running it locally
+## Running locally
 
-You need **Node.js 22 LTS** (Vite 8 needs at least 20.19 or 22.12).
+Requires **Node.js 22 LTS**.
 
-To automatically install dependencies, start the server, and open the app in a standalone window (stopping everything when you close the window), run [`run.py`](run.py) from the repository root:
+To install dependencies, start the dev server, and open the app in a standalone portrait window:
 
 ```sh
 python run.py
 ```
 
-Or run `npm` commands manually from `src/`:
+Or run `npm` directly from `src/`:
 
 ```sh
-git clone https://github.com/reveltechnologies/file-size-minimizer.git
-cd file-size-minimizer/src
+cd src
 npm install
 npm run dev
 ```
 
-Then open the address it prints (usually http://localhost:5173).
-
-> Run `npm install` from `src/` only, not inside `src/apps/web`, or the web app can't find `@revel/core`.
-
-| Command | What it does |
+| Command | Description |
 |---|---|
-| `npm run dev` | Starts the app with live reload |
-| `npm run build` | Type-checks and builds the production site into `src/apps/web/dist` |
-| `npm run preview` | Serves the production build locally |
-| `npm test` | Runs the unit tests for `packages/core` and `apps/web` (Vitest) |
-| `npm run typecheck` | Type-checks `packages/core` |
-| `npm run lint -w apps/web` | Lints the web app (oxlint) |
-
-**Notes**
-- The first video shrink downloads the video engine (ffmpeg.wasm, about 9 MB) from jsDelivr, so it needs an internet connection. Photos and PDFs work offline.
-- Tested in Chrome and Edge.
+| `npm run dev` | Start dev server |
+| `npm run build` | Type-check and build production bundle into `src/apps/web/dist` |
+| `npm run preview` | Preview production build locally |
+| `npm test` | Run unit tests (`packages/core` and `apps/web`) |
+| `npm run typecheck` | Type-check `packages/core` |
+| `npm run lint -w apps/web` | Lint web app with oxlint |
 
 ---
 
-## Project layout
+## Project structure
 
 ```
 src/
-  apps/web/          React web app (Vite, Tailwind)
-    src/engines/     Browser code that does the shrinking: video, photo, PDF, photos → PDF
-    src/components/  UI pieces: drop zone, target picker, progress, receipt
-  packages/core/     Plain TypeScript shared with the upcoming Android app:
-                     size presets, bitrate maths, ffmpeg arguments, JPEG metadata,
-                     photo fitting, PDF page layout (with unit tests)
-docs/                User guide: how to use the app and common questions
+  apps/web/          React + Vite + Tailwind mobile web app
+    src/components/  UI scenes and components
+    src/engines/     Local video, image, and PDF compression engines
+    src/lib/         State, i18n, storage, and helpers
+    src/locales/     Language files (en_us.json, tr_tr.json)
+  packages/core/     Shared TypeScript core (presets, bitrate math, metadata, layout)
 ```
 
-### Built with
-
-- [React 19](https://react.dev) + [Vite 8](https://vite.dev) + [Tailwind CSS 4](https://tailwindcss.com)
-- [ffmpeg.wasm](https://github.com/ffmpegwasm/ffmpeg.wasm) for video
-- [pdf-lib](https://pdf-lib.js.org) for PDFs
-- [heic-to](https://github.com/hoppergee/heic-to) for iPhone photos
-- The browser's canvas for photo re-encoding
-
 ---
 
-## Repository automation
+## Contributing & Legal
 
-When you push to GitHub, the workflows in `.github/workflows/` (switched on or off in [`config.yaml`](config.yaml)):
-
-- Run the **unit tests**, type checks, lint and build (`tests.yml`). A red ❌ next to a commit means one of them failed; click it to see which.
-- Run **CodeQL** security analysis.
-- Create or update a **GitHub Release** for each version in [`CHANGELOG.md`](CHANGELOG.md).
-- Keep the supported-versions table in [`SECURITY.md`](SECURITY.md) up to date.
-- Sync documentation and workflows to other active branches.
-
----
-
-## Contributing
-
-Add every change to [CHANGELOG.md](CHANGELOG.md) under a version number, and pick the version type (alpha, beta, rc or release) by how well the app works. The guide is at the top of that file.
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). To report a security issue, see [SECURITY.md](SECURITY.md).
-
-## License
-
-[GNU General Public License v3.0](LICENSE)
+- [Contributing Guide](CONTRIBUTING.md)
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Security Policy](SECURITY.md)
+- [Terms of Use](TERMS_OF_USE.md)
+- [GNU General Public License v3.0](LICENSE)

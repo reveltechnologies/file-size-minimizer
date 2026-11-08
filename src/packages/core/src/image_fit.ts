@@ -1,18 +1,13 @@
-/** Portals never need more; also keeps canvases inside mobile memory limits. */
 export const MAX_IMAGE_LONG_SIDE = 4096
-/** Below this a photo stops being useful, so we report failure instead. */
 export const MIN_IMAGE_LONG_SIDE = 320
 export const MIN_JPEG_QUALITY = 0.5
 export const MAX_JPEG_QUALITY = 0.92
 const QUALITY_SEARCH_STEPS = 5
 const MAX_SCALE_ROUNDS = 6
-/** Lossless encodes are cheaper to retry than a full quality search, so allow more rounds. */
 const MAX_LOSSLESS_SCALE_ROUNDS = 8
 
 export interface ImageEncodeAttempt {
-  /** Multiplier on the source width and height. */
   scale: number
-  /** JPEG quality, 0…1. */
   quality: number
 }
 
@@ -36,13 +31,6 @@ export function imageScaleRange(width: number, height: number): ScaleRange {
   }
 }
 
-/**
- * Finds the sharpest encode that fits under maxBytes: the highest JPEG
- * quality at the current size, shrinking the dimensions only when even
- * MIN_JPEG_QUALITY is too big. Returns null if nothing fits.
- *
- * `encode` does the platform work (canvas on web, native on Android).
- */
 export async function fitImageToSize<T>(
   encode: (attempt: ImageEncodeAttempt) => Promise<Encoded<T>>,
   maxBytes: number,
@@ -78,10 +66,6 @@ export async function fitImageToSize<T>(
   return null
 }
 
-/**
- * Like fitImageToSize, for lossless formats (PNG) that have no quality
- * setting: only the dimensions can shrink. Returns null if nothing fits.
- */
 export async function fitLosslessImageToSize<T>(
   encode: (scale: number) => Promise<Encoded<T>>,
   maxBytes: number,
@@ -98,7 +82,6 @@ export async function fitLosslessImageToSize<T>(
   return null
 }
 
-/** Image size grows roughly with pixel count, i.e. with scale². */
 function nextScale(scale: number, minScale: number, maxBytes: number, bytes: number): number {
   return Math.max(minScale, scale * Math.min(0.9, Math.sqrt(maxBytes / bytes) * 0.95))
 }
@@ -108,10 +91,6 @@ export interface PdfImageStep {
   quality: number
 }
 
-/**
- * Recompression steps for images inside PDFs, gentlest first. A4 at
- * 150 DPI is 1754 px on the long side.
- */
 export const PDF_IMAGE_STEPS: readonly PdfImageStep[] = [
   { maxLongSide: 1754, quality: 0.8 },
   { maxLongSide: 1754, quality: 0.65 },

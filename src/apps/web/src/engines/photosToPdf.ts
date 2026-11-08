@@ -9,19 +9,14 @@ import { PDFDocument } from 'pdf-lib'
 import { createImageRenderer, decodeImage } from './canvas'
 import type { CompressJob, CompressResult } from './types'
 
-/**
- * Combines photos into one A4 PDF that fits the target. Photos are redrawn
- * on a canvas, so their GPS and camera data never reach the PDF.
- */
 export async function photosToPdf(job: CompressJob): Promise<CompressResult> {
   const { files, maxBytes, onStep, onProgress, onStatus, signal } = job
   const pages: ImageBitmap[] = []
 
   try {
-    // Downscale right away: 30 full-size phone photos would not fit in memory.
     for (const [i, file] of files.entries()) {
       signal.throwIfAborted()
-      onStatus(`Reading photo ${i + 1} of ${files.length}…`)
+      onStatus(`${i + 1} / ${files.length}`)
       onProgress(i / files.length)
       pages.push(await downscale(await decodeImage(file, onStatus), PDF_IMAGE_STEPS[0].maxLongSide))
     }
@@ -29,7 +24,7 @@ export async function photosToPdf(job: CompressJob): Promise<CompressResult> {
     onStep('shrink')
     let bytes: Uint8Array = new Uint8Array()
     for (const [i, step] of PDF_IMAGE_STEPS.entries()) {
-      onStatus(i === 0 ? 'Building your PDF…' : 'Fine-tuning the size…')
+      onStatus('Building PDF…')
       onProgress(i / PDF_IMAGE_STEPS.length)
       bytes = await buildPdf(pages, step, signal)
       if (bytes.length <= maxBytes) break
@@ -60,7 +55,6 @@ async function downscale(bitmap: ImageBitmap, maxLongSide: number): Promise<Imag
 }
 
 async function buildPdf(pages: ImageBitmap[], step: PdfImageStep, signal: AbortSignal): Promise<Uint8Array> {
-  // updateMetadata: false leaves out pdf-lib's own Producer/Creator/date stamps.
   const doc = await PDFDocument.create({ updateMetadata: false })
   for (const bitmap of pages) {
     signal.throwIfAborted()

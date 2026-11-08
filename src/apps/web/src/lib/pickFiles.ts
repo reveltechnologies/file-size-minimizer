@@ -1,12 +1,10 @@
 import { compareFileNames, detectCategory, MAX_MERGE_PHOTOS, type FileCategory } from '@revel/core'
 
 export interface PickedFiles {
-  /** Several files only when combining photos into one PDF. */
   files: File[]
   category: FileCategory
 }
 
-/** Validates a pick; returns an error message or what to process. */
 export function pickFiles(files: File[]): PickedFiles | string {
   const empty = files.find((file) => file.size === 0)
   if (empty) return `"${empty.name}" is empty.`

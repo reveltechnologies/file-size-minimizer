@@ -27,16 +27,14 @@ async function compressToJpeg(job: CompressJob): Promise<CompressResult> {
     fileName,
   })
 
-  onStatus('Opening your photo…')
+  onStatus('Reading image…')
   const original = new Uint8Array(await file.arrayBuffer())
 
-  // A JPEG that already fits keeps every pixel; only its metadata is touched.
   if (isJpeg(original) && original.length <= maxBytes) {
     const result = options.stripHiddenData ? stripJpegMetadata(original) : original
     if (result) return toResult(result)
   }
 
-  // EXIF only survives re-encoding for JPEG sources; reserve room for it.
   const exif = !options.stripHiddenData && isJpeg(original) ? extractExif(original) : null
   const budget = maxBytes - (exif?.length ?? 0)
 
@@ -44,7 +42,7 @@ async function compressToJpeg(job: CompressJob): Promise<CompressResult> {
   try {
     signal.throwIfAborted()
     onStep('shrink')
-    onStatus('Finding the best quality that fits…')
+    onStatus('Compressing…')
     const render = createImageRenderer(bitmap)
     let attempts = 0
     const fitted = await fitImageToSize(
@@ -58,7 +56,7 @@ async function compressToJpeg(job: CompressJob): Promise<CompressResult> {
       imageScaleRange(bitmap.width, bitmap.height),
     )
     if (!fitted) {
-      throw new Error(`Couldn't get this photo under ${formatBytes(maxBytes)} without making it too small to use.`)
+      throw new Error(`Couldn't fit photo under ${formatBytes(maxBytes)}.`)
     }
 
     onProgress(1)
@@ -69,15 +67,13 @@ async function compressToJpeg(job: CompressJob): Promise<CompressResult> {
   }
 }
 
-/** Keeps transparency. PNG has no quality setting, so only the dimensions can shrink. */
 async function compressToPng(job: CompressJob): Promise<CompressResult> {
   const { files: [file], maxBytes, options, onStep, onProgress, onStatus, signal } = job
   const fileName = outputFileName(file.name, 'image', 'png')
 
-  onStatus('Opening your image…')
+  onStatus('Reading image…')
   const original = new Uint8Array(await file.arrayBuffer())
 
-  // A PNG that already fits keeps every pixel; only its metadata is touched.
   if (isPng(original) && original.length <= maxBytes) {
     const result = options.stripHiddenData ? stripPngMetadata(original) : original
     if (result) return { blob: new Blob([result], { type: outputMimeType('image', 'png') }), fileName }
@@ -87,7 +83,7 @@ async function compressToPng(job: CompressJob): Promise<CompressResult> {
   try {
     signal.throwIfAborted()
     onStep('shrink')
-    onStatus('Finding the biggest size that fits…')
+    onStatus('Compressing…')
     const render = createImageRenderer(bitmap, 'png')
     let attempts = 0
     const fitted = await fitLosslessImageToSize(
@@ -101,9 +97,7 @@ async function compressToPng(job: CompressJob): Promise<CompressResult> {
       imageScaleRange(bitmap.width, bitmap.height),
     )
     if (!fitted) {
-      throw new Error(
-        `Couldn't get this image under ${formatBytes(maxBytes)} as a PNG without making it too small to use. Try saving it as JPG.`,
-      )
+      throw new Error(`Couldn't fit PNG under ${formatBytes(maxBytes)}. Try JPG.`)
     }
 
     onProgress(1)

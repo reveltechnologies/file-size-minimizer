@@ -277,7 +277,6 @@ function App() {
   return (
     <I18nContext value={i18nValue}>
       <div className="h-dvh overflow-hidden bg-[var(--app-outer)] text-slate-900 dark:text-slate-100">
-        {/* Portrait-only lock overlay when a physical phone is rotated horizontally */}
         <div
           aria-hidden="true"
           className="portrait-lock-overlay fixed inset-0 z-50 hidden flex-col items-center justify-center gap-2 bg-black px-6 text-center text-white"
@@ -297,7 +296,6 @@ function App() {
           <p className="text-base font-bold">{t('common.portraitOnly')}</p>
         </div>
 
-        {/* Vertical phone shell constrained for every phone screen */}
         <div className="mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-[var(--app-shell)] shadow-xl">
           <header className="z-10 flex shrink-0 items-center justify-between gap-3 border-b border-[var(--app-border)] bg-[var(--app-shell)] px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-2.5">
             <div className="flex min-w-0 items-center gap-2.5">
@@ -541,7 +539,6 @@ function App() {
             )}
           </main>
 
-          {/* Bottom slide/scroll navigation bar: View | Shrink | Settings */}
           <nav
             aria-label="App scenes"
             className="z-10 shrink-0 border-t border-[var(--app-border)] bg-[var(--app-shell)] px-4 pt-2 pb-[max(env(safe-area-inset-bottom),0.75rem)]"

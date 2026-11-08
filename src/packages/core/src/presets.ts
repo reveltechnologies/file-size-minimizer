@@ -1,7 +1,3 @@
-/**
- * Sizes use decimal units (1 MB = 1,000,000 bytes). That is the stricter
- * reading of any upload limit, so a file that fits here fits everywhere.
- */
 export const KB = 1000
 export const MB = 1000 * KB
 
@@ -31,7 +27,6 @@ export function presetsFor(category: FileCategory): SizePreset[] {
   return PRESETS.filter((preset) => preset.category === category)
 }
 
-/** Human-readable size, e.g. 9_400_000 → "9.4 MB", 480_000 → "480 KB". */
 export function formatBytes(bytes: number): string {
   if (bytes >= MB) return `${Number((bytes / MB).toFixed(1))} MB`
   if (bytes >= KB) return `${Math.round(bytes / KB)} KB`

@@ -1,6 +1,5 @@
 import type { FileCategory } from './presets'
 
-/** What a photo is saved as. JPEG is the default: smallest, and accepted everywhere. */
 export type ImageFormat = 'jpeg' | 'png'
 
 interface OutputType {
@@ -16,7 +15,6 @@ const INPUT_EXTENSIONS: Record<FileCategory, readonly string[]> = {
   pdf: ['pdf'],
 }
 
-/** Sources that can have see-through areas, which JPEG can't keep. */
 const PNG_OUTPUT_SOURCES = { extensions: ['png', 'webp'], mimeTypes: ['image/png', 'image/webp'] }
 
 const OUTPUT: Record<Exclude<FileCategory, 'image'>, OutputType> = {
@@ -31,11 +29,6 @@ const IMAGE_OUTPUT: Record<ImageFormat, OutputType> = {
 
 export const ACCEPTED_EXTENSIONS: readonly string[] = CATEGORIES.flatMap((c) => INPUT_EXTENSIONS[c])
 
-/**
- * Detects by extension first: browsers and Android often report HEIC and MKV
- * with an empty or generic MIME type. Falls back to the MIME type for
- * Android content:// URIs that arrive without a file name.
- */
 export function detectCategory(fileName: string, mimeType = ''): FileCategory | null {
   const extension = extensionOf(fileName)
   const byExtension = CATEGORIES.find((c) => INPUT_EXTENSIONS[c].includes(extension))
@@ -47,7 +40,6 @@ export function detectCategory(fileName: string, mimeType = ''): FileCategory | 
   return null
 }
 
-/** PNG and WebP photos may be saved as PNG to keep transparency; everything else becomes JPEG. */
 export function offersPngOutput(fileName: string, mimeType = ''): boolean {
   const extension = extensionOf(fileName)
   if (extension) return PNG_OUTPUT_SOURCES.extensions.includes(extension)
@@ -60,7 +52,6 @@ export function isJpegFile(fileName: string, mimeType = ''): boolean {
   return mimeType === 'image/jpeg'
 }
 
-/** "IMG_1234.MOV" → "IMG_1234-fit.mp4" */
 export function outputFileName(inputName: string, category: FileCategory, imageFormat: ImageFormat = 'jpeg'): string {
   const dot = inputName.lastIndexOf('.')
   const base = dot > 0 ? inputName.slice(0, dot) : inputName || 'file'

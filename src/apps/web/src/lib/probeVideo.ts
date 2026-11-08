@@ -4,11 +4,6 @@ export interface VideoInfo {
   height: number
 }
 
-/**
- * Reads duration and size using the browser's own decoder. Resolves null
- * when the browser can't open the format (often MKV, HEVC .MOV on Chrome,
- * GIF); the ffmpeg engine probes those itself in step 4.
- */
 export function probeVideo(file: File): Promise<VideoInfo | null> {
   return new Promise((resolve) => {
     const url = URL.createObjectURL(file)

@@ -80,7 +80,6 @@ export function SettingsPanel({
 
   return (
     <div className="flex flex-1 flex-col gap-3">
-      {/* Language selection */}
       <section className={`${CARD} flex flex-col gap-2.5`}>
         <h2 className="text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
           {t('settings.language')}
@@ -104,7 +103,6 @@ export function SettingsPanel({
         </div>
       </section>
 
-      {/* Theme selection */}
       <section className={`${CARD} flex flex-col gap-2.5`}>
         <h2 className="text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
           {t('settings.theme')}
@@ -144,7 +142,6 @@ export function SettingsPanel({
         </div>
       </section>
 
-      {/* Output Folder & File Naming */}
       <section className={`${CARD} flex flex-col gap-3`}>
         <h2 className="text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
           {t('settings.outputFolder')}
@@ -232,7 +229,6 @@ export function SettingsPanel({
         </p>
       </section>
 
-      {/* Defaults & History */}
       <section className={`${CARD} flex flex-col gap-2.5`}>
         <h2 className="text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
           {t('settings.defaults')}
@@ -325,7 +321,6 @@ export function SettingsPanel({
         </div>
       </section>
 
-      {/* Open Source, Security & Legal links */}
       <section className={`${CARD} flex flex-col gap-2.5 text-xs`}>
         <div className="flex items-center justify-between gap-2">
           <div>

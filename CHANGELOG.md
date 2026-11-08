@@ -5,103 +5,56 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-<!--- To add private notes or comments in this changelog that won't show in the rendered release, use markdown comments like this. -->
-
-<!--
-Add every change here. Pick the version type by how well the app works:
-  -alpha.X  early build, features still missing or rough
-  -beta.X   every feature works and is tested, not public yet
-  -rc.X     release candidate, only bug fixes before the release
-  (none)    release, public and stable
-The release workflow marks alpha, beta and rc versions as pre-releases on GitHub.
--->
-
 ## [0.5.0-beta.1] - 2026-11-08
 
-**Type:** Beta. Every feature works and has been tested in Chrome and Edge, but the app isn't public yet.
-
 ### Added
-- Mobile-first vertical phone UI tailored for all phone screen sizes (compact to tall screens), with sticky app bar, thumb-friendly bottom navigation bar, and full-width touch controls.
-- Full-screen horizontal swipe/drag navigation and bottom slide/tap bar switching between **View** (left), **Shrink** (center), and **Settings** (right), plus vertical drag-to-scroll with hidden scrollbars.
-- On-device **View** scene that lets you pick and read files a phone often can't open directly (`.txt`, `.log`, `.json`, `.csv`, `.xml`, code/config files, HEIC photos, PDFs, audio/video, and binary hex/text inspection) with line search, wrap toggle, text resizing, and copy.
-- Multi-language support (`en_us` English and `tr_tr` Turkish) with automatic phone language detection on first launch, a **Language** selector in Settings, and contributor-friendly JSON locale files in `src/apps/web/src/locales/`.
-- **Settings** scene with 5 selectable themes (**Dark Green** default, **OLED Black**, **Dark Slate**, **Mint Light**, **Light**), persistent settings stored on-device across restarts, default privacy/compression options, and an Open-Source & 100% Local section linking to the GitHub repository, `SECURITY.md`, `TERMS_OF_USE.md`, and `LICENSE`.
-- Added `TERMS_OF_USE.md` and expanded `SECURITY.md` with local-only processing and privacy guarantees.
-- Output folder settings (**Same folder**, **Ask every time**, **Fixed folder** with folder picker) and custom output file naming (**Prefix** and **Suffix** with live filename preview).
-- On-device history (via IndexedDB) remembering the last 10 viewed files and last 10 size-reduced files so they can be viewed or downloaded again anytime, with a Settings toggle to disable or clear history.
-- Portrait orientation lock via Web App Manifest (`portrait-primary`), Screen Orientation API, and a landscape rotation blocker overlay on mobile devices.
-- Official app logo (`logo.png`) used as the app icon and in the top-left header of the app.
-- `run.py` in the repository root to automatically install dependencies, launch the dev server, open the app in a standalone portrait phone window (`412×880`), and shut everything down when the window closes.
+- Portrait mobile UI with `logo.png` header, swipe navigation, and bottom slide/tap bar across **View**, **Shrink**, and **Settings**.
+- Local **View** scene for `.txt`, `.log`, `.json`, `.csv`, code/config files, HEIC photos, PDFs, audio/video, and binary hex/text inspection.
+- Multi-language support (`en_us` and `tr_tr`) with automatic device language detection on first launch.
+- **Settings** scene with 5 themes (Dark Green default), output folder mode, custom file prefix/suffix, default options, and links to GitHub, `SECURITY.md`, `TERMS_OF_USE.md`, and `LICENSE`.
+- Local IndexedDB history for the last 10 viewed and last 10 shrunk files with re-view, re-download, and clear/disable controls.
+- `run.py` launcher for running the app in a standalone portrait window.
 
 ### Changed
-- Simplified all UI copy, removed emojis and verbose sentences, and replaced text action controls with SVG icon buttons.
-- Moved all code and workspace files (`apps/`, `packages/`, `package.json`, `package-lock.json`) into `src/` to separate the application code from repository documentation and workflows.
+- Moved workspace packages (`apps/`, `packages/`, `package.json`) into `src/`.
+- Simplified UI copy and replaced text action buttons with icons.
 
 ## [0.4.2-beta.1] - 2026-11-05
 
-**Type:** Beta. Every feature works and has been tested in Chrome and Edge, but the app isn't public yet.
-
 ### Added
-- Unit tests for the web app: file picking and validation, size limits (presets and custom sizes) and the progress bar rules (never goes backwards, room for retries, slows down near the end). `npm test` and the Tests workflow now run them alongside the core tests.
+- Unit tests for file picking, target calculation, and progress smoothing in `apps/web`.
 
 ### Changed
-- Updated Vitest from 5.0.5 to 5.1.0.
+- Updated Vitest to 5.1.0.
 
 ## [0.4.1-beta.1] - 2026-11-05
 
-**Type:** Beta. Every feature works and has been tested in Chrome and Edge, but the app isn't public yet.
-
 ### Added
-- A Tests workflow that runs the unit tests, type checks, lint and build on every push and pull request. It can be turned off with `unit_tests` in `config.yaml`.
+- GitHub Actions workflow (`tests.yml`) running unit tests, type checks, lint, and build.
 
 ## [0.4.0-beta.1] - 2026-10-29
 
-**Type:** Beta. Every feature works and has been tested in Chrome and Edge, but the app isn't public yet.
-
 ### Added
-- PNG and WebP images can be saved as PNG, keeping see-through areas. Images with see-through areas are saved as PNG by default; others stay JPG, the smallest option.
-- A "Save as" choice (JPG or PNG) for PNG and WebP images, with a warning when JPG would turn see-through areas white.
-- The settings screen says when a photo will be saved as JPG (e.g. iPhone HEIC photos), and the receipt says which format was used.
+- PNG output option for PNG and WebP images to preserve transparency.
 
 ### Fixed
-- PNG images were always turned into JPG without telling the user, and lost their transparency.
+- Preserved transparency instead of forcing JPG conversion on transparent PNGs.
 
 ## [0.3.0-beta.1] - 2026-10-29
 
-**Type:** Beta. Every feature works and has been tested in Chrome and Edge, but the app isn't public yet.
-
 ### Added
-- A warning before shrinking a video that would look very blurry, with an option to shrink it anyway.
-- A clear warning on the receipt when a file can't get under the limit, showing the smallest size reached.
-- A README describing what the app does and how to run it.
-
-### Changed
-- Friendlier progress screen with steps (Preparing, Shrinking, Done) and a bar that never goes backwards.
-- Combined photo order is shown as a numbered list, which reads better on small screens.
-- Turned off the wiki sync in `config.yaml`; the project doesn't use a wiki.
+- Low-bitrate video warning with an option to shrink anyway.
+- Receipt notice when a file cannot be reduced below the target size.
 
 ### Security
-- Fixed a slow regular expression (polynomial ReDoS) when reading video details.
+- Fixed polynomial regex in ffmpeg stream parsing.
 
 ## [0.2.0-alpha.1] - 2026-10-27
 
-**Type:** Alpha. Early build for testing, not public.
-
 ### Added
-- Combine several photos into one A4 PDF that fits the chosen size.
+- Combine multiple photos into a single A4 PDF under a target size.
 
 ## [0.1.0-alpha.1] - 2026-10-26
 
-**Type:** Alpha. First working build, not public.
-
 ### Added
-- Web app built with Vite, React, TypeScript and Tailwind.
-- Shared `@revel/core` package with size presets, bitrate maths, ffmpeg arguments, JPEG metadata, photo fitting and PDF layout, with unit tests.
-- Size presets: Discord Free, WhatsApp and Email / Gmail for video; Strict Portal ID and Standard Form for photos; Visa / Uni Portal, Standard Doc and Email Packet for PDFs; plus a custom limit.
-- Video shrinking with ffmpeg.wasm (MP4, MOV, WebM, MKV, GIF → MP4), with automatic retries when a result comes out slightly too big.
-- Smart optimize for video (HDR → SDR, 60 → 30 FPS, lower resolution when the limit is tight) and a Mute audio option.
-- Photo shrinking (JPG, PNG, WebP, HEIC / HEIF) that finds the best quality and size that fits.
-- PDF shrinking that removes edit history and unused data, then re-compresses large photos and scans.
-- Remove hidden data: GPS location, camera serial numbers, author tags and PDF metadata.
-- Savings receipt showing the before and after size, plus download and share.
-- Everything runs in the browser; files never leave the device.
+- Initial web app and `@revel/core` package for local video, photo, and PDF compression.

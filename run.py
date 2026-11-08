@@ -1,13 +1,4 @@
 #!/usr/bin/env python3
-"""Launch the File Size Minimizer dev server in a standalone desktop window.
-
-When this script is run:
-1. Installs npm dependencies in `src/` if needed.
-2. Starts the Vite dev server on an available local port.
-3. Opens the app in a standalone desktop window (Chrome/Edge `--app` mode).
-4. Automatically shuts down the dev server and cleans up when the window is closed.
-"""
-
 from __future__ import annotations
 
 import os
@@ -30,7 +21,6 @@ SRC_DIR = ROOT_DIR / "src"
 
 
 def find_npm() -> str:
-    """Return the npm executable path for the current platform."""
     candidates = ["npm.cmd", "npm"] if sys.platform == "win32" else ["npm"]
     for candidate in candidates:
         path = shutil.which(candidate)
@@ -40,7 +30,6 @@ def find_npm() -> str:
 
 
 def find_free_port(preferred: int = 5173) -> int:
-    """Return `preferred` localhost TCP port if available, otherwise any free port."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         try:
             sock.bind(("127.0.0.1", preferred))
@@ -51,7 +40,6 @@ def find_free_port(preferred: int = 5173) -> int:
 
 
 def wait_for_server(url: str, server_proc: subprocess.Popen, timeout: float = 30.0) -> bool:
-    """Poll `url` until the dev server responds or times out."""
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if server_proc.poll() is not None:
@@ -66,7 +54,6 @@ def wait_for_server(url: str, server_proc: subprocess.Popen, timeout: float = 30
 
 
 def find_app_browser() -> str | None:
-    """Locate a Chromium-based browser that supports standalone `--app` windows."""
     if sys.platform == "win32":
         local_app_data = os.environ.get("LOCALAPPDATA", "")
         program_files = os.environ.get("PROGRAMFILES", r"C:\Program Files")
@@ -100,7 +87,6 @@ def find_app_browser() -> str | None:
 
 
 def kill_process_tree(proc: subprocess.Popen | None) -> None:
-    """Terminate a subprocess and all of its child processes."""
     if proc is None or proc.poll() is not None:
         return
     try:
@@ -122,10 +108,9 @@ def kill_process_tree(proc: subprocess.Popen | None) -> None:
 
 
 def ensure_dependencies(npm_bin: str) -> None:
-    """Run `npm install` in `src/` if dependencies or workspace links are missing."""
     core_link = SRC_DIR / "node_modules" / "@revel" / "core"
     if not (SRC_DIR / "node_modules").is_dir() or not core_link.exists():
-        print("==> Installing npm dependencies in src/...")
+        print("Installing dependencies...")
         subprocess.run([npm_bin, "install"], cwd=str(SRC_DIR), check=True)
 
 
@@ -165,7 +150,7 @@ def main() -> int:
         "--strictPort",
     ]
 
-    print(f"==> Starting dev server at {url} ...")
+    print(f"Starting server at {url} ...")
     server_proc = subprocess.Popen(server_cmd, **popen_kwargs)
     recent_logs: deque[str] = deque(maxlen=50)
 
@@ -181,7 +166,6 @@ def main() -> int:
     profile_dir.mkdir(parents=True, exist_ok=True)
 
     def cleanup(*_args: object) -> None:
-        print("\n==> Shutting down application and dev server...")
         kill_process_tree(window_proc)
         kill_process_tree(server_proc)
 
@@ -209,18 +193,15 @@ def main() -> int:
                 "--disable-background-mode",
                 "--disable-extensions",
             ]
-            print("==> Opening standalone application window (close the window to stop everything)...")
             window_proc = subprocess.Popen(
                 window_cmd,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
 
-            # Wait until either the user closes the standalone window or the server stops.
             while window_proc.poll() is None and server_proc.poll() is None:
                 time.sleep(0.3)
         else:
-            print("==> Opening in default browser (press Ctrl+C here to stop the server)...")
             webbrowser.open_new(url)
             server_proc.wait()
 

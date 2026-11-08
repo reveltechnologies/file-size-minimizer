@@ -53,10 +53,6 @@ AVAILABLE_LOCALES.sort((a, b) => {
 
 export const DEFAULT_LOCALE = 'en_us'
 
-/**
- * Matches a browser/phone language tag (e.g. "tr-TR", "tr", "en-GB")
- * against available locale files, falling back to `en_us`.
- */
 export function resolveLocaleCode(candidates: readonly string[]): string {
   for (const raw of candidates) {
     if (!raw) continue
@@ -111,4 +107,3 @@ export const I18nContext = createContext<I18nContextValue>({
 export function useI18n(): I18nContextValue {
   return useContext(I18nContext)
 }
-

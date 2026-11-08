@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { probeVideo, type VideoInfo } from './probeVideo'
 
-/** Null while probing, when no file is given, or when the browser can't read it. */
 export function useVideoInfo(file: File | null): VideoInfo | null {
   const [probe, setProbe] = useState<{ file: File; info: VideoInfo | null } | null>(null)
 
