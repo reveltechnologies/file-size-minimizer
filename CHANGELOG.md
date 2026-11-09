@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-11-09
+
+### Changed
+- Replaced legacy Android raster splash drawables with the AndroidX `SplashScreen` API (`core-splashscreen`) and enabled R8 code minification and resource shrinking (`shrinkResources`) for smaller `.aab` release bundles.
+- Updated CodeQL workflow to analyze Java sources in build-less mode (`build-mode: none`).
+
+### Security
+- Hardened browser download and preview object URLs in `saveFile.ts` and `FileViewer.tsx` against DOM XSS (`js/xss-through-dom`).
+
 ## [1.0.0] - 2026-11-08
 
 First stable production release for Google Play and web.
