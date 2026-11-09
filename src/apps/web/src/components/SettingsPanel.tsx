@@ -328,7 +328,7 @@ export function SettingsPanel({
           <div>
             <p className="font-semibold">{t('settings.openSourceLocal')}</p>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              {t('settings.noExternalData')} · v1.0.1
+              {t('settings.noExternalData')} · v1.0.2
             </p>
           </div>
           <a
