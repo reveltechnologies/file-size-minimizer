@@ -215,14 +215,20 @@ export function FileViewer({
         if (ext === 'heic' || ext === 'heif' || file.type === 'image/heic' || file.type === 'image/heif') {
           const { heicTo } = await import('heic-to')
           const converted = await heicTo({ blob: file, type: 'image/jpeg', quality: 0.9 })
-          objectUrl = URL.createObjectURL(converted)
+          objectUrl = URL.createObjectURL(new Blob([converted], { type: 'image/jpeg' }))
         } else {
-          objectUrl = URL.createObjectURL(file)
+          const safeImageMime =
+            file.type.startsWith('image/') && file.type !== 'image/svg+xml'
+              ? file.type
+              : 'image/jpeg'
+          objectUrl = URL.createObjectURL(new Blob([file], { type: safeImageMime }))
         }
       } else if (kind === 'video' || kind === 'audio') {
-        objectUrl = URL.createObjectURL(file)
+        const fallbackMime = kind === 'video' ? 'video/mp4' : 'audio/mpeg'
+        const safeMediaMime = file.type.startsWith(`${kind}/`) ? file.type : fallbackMime
+        objectUrl = URL.createObjectURL(new Blob([file], { type: safeMediaMime }))
       } else if (kind === 'pdf') {
-        objectUrl = URL.createObjectURL(file)
+        objectUrl = URL.createObjectURL(new Blob([file], { type: 'application/pdf' }))
         try {
           const { PDFDocument } = await import('pdf-lib')
           const fullBuf = await file.arrayBuffer()

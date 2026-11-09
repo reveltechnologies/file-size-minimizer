@@ -107,7 +107,8 @@ async function writeToNativeCache(blob: Blob, fileName: string): Promise<string>
 }
 
 function triggerBrowserDownload(blob: Blob, fileName: string): void {
-  const url = URL.createObjectURL(blob)
+  const safeBlob = new Blob([blob], { type: 'application/octet-stream' })
+  const url = URL.createObjectURL(safeBlob)
   const link = document.createElement('a')
   link.href = url
   link.download = fileName
