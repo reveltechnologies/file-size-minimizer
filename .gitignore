@@ -31,3 +31,6 @@ desktop.ini
 .env.local
 *.log
 /__pycache__
+/google-play-assets
+feature-graphic-1024x500.png
+file-size-minimizer-512.png
