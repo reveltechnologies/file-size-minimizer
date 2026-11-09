@@ -82,7 +82,7 @@ jobs:
           fi
 
           if git ls-files | grep -Eq '\.(java|kt|kts)$'; then
-            langs+=('{"language": "java-kotlin", "build-mode": "autobuild"}')
+            langs+=('{"language": "java-kotlin", "build-mode": "none"}')
           fi
 
           if git ls-files | grep -Eq '\.(js|jsx|mjs|cjs|ts|tsx|mts|cts|html|htm|vue|svelte)$' || [ -f "package.json" ]; then
