@@ -7,6 +7,7 @@ import {
   type FileCategory,
   type ImageFormat,
 } from '@revel/core'
+import { Capacitor } from '@capacitor/core'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { DropZone } from './components/DropZone'
 import { FileViewer } from './components/FileViewer'
@@ -113,6 +114,9 @@ function App() {
   const { t } = i18nValue
 
   useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      document.body.classList.add('native-platform')
+    }
     const orientation = screen.orientation as ScreenOrientation & {
       lock?: (mode: string) => Promise<void>
     }
@@ -135,6 +139,7 @@ function App() {
 
   const sceneIndex = SCENES.findIndex((s) => s.id === scene)
   const activeSceneMeta = SCENES[sceneIndex]
+  const isNative = Capacitor.isNativePlatform()
 
   const videoInfo = useVideoInfo(picked?.category === 'video' ? picked.files[0] : null)
   const photo = picked?.category === 'image' ? picked.files[0] : null
@@ -156,6 +161,7 @@ function App() {
           maxBytes,
           durationSec: videoInfo.durationSec,
           audioKbps: options.muteAudio ? 0 : DEFAULT_AUDIO_KBPS,
+          sourceBytes: totalBytes,
         })
       : null
   const canShrink =
@@ -198,7 +204,8 @@ function App() {
     }
     setError(null)
     setPicked(pick)
-    setTarget(defaultTarget(pick.category))
+    const total = pick.files.reduce((sum, f) => sum + f.size, 0)
+    setTarget(defaultTarget(pick.category, total))
   }
 
   async function handleShrink(forceBlurry = false) {
@@ -276,7 +283,11 @@ function App() {
 
   return (
     <I18nContext value={i18nValue}>
-      <div className="h-dvh overflow-hidden bg-[var(--app-outer)] text-slate-900 dark:text-slate-100">
+      <div
+        className={`flex h-full min-h-dvh w-full flex-col overflow-hidden text-slate-900 dark:text-slate-100 ${
+          isNative ? 'bg-[var(--app-shell)]' : 'bg-[var(--app-shell)] sm:bg-[var(--app-outer)]'
+        }`}
+      >
         <div
           aria-hidden="true"
           className="portrait-lock-overlay fixed inset-0 z-50 hidden flex-col items-center justify-center gap-2 bg-black px-6 text-center text-white"
@@ -296,8 +307,14 @@ function App() {
           <p className="text-base font-bold">{t('common.portraitOnly')}</p>
         </div>
 
-        <div className="mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-[var(--app-shell)] shadow-xl">
-          <header className="z-10 flex shrink-0 items-center justify-between gap-3 border-b border-[var(--app-border)] bg-[var(--app-shell)] px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-2.5">
+        <div
+          className={`mx-auto flex h-full w-full flex-1 flex-col overflow-hidden bg-[var(--app-shell)] ${
+            isNative
+              ? 'max-w-none shadow-none'
+              : 'max-w-none shadow-none sm:max-w-md sm:shadow-xl sm:border-x sm:border-[var(--app-border)]'
+          }`}
+        >
+          <header className="z-10 flex shrink-0 items-center justify-between gap-3 border-b border-[var(--app-border)] bg-[var(--app-shell)] px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-2.5 pl-[max(env(safe-area-inset-left),1rem)] pr-[max(env(safe-area-inset-right),1rem)]">
             <div className="flex min-w-0 items-center gap-2.5">
               <img src="/logo.png" alt="" className="size-8 shrink-0 object-contain" />
               <h1 className="truncate text-base font-bold tracking-tight">
@@ -372,7 +389,7 @@ function App() {
             onPointerCancel={() => {
               gestureRef.current.active = false
             }}
-            className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-3"
+            className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-3 pb-6 pl-[max(env(safe-area-inset-left),1rem)] pr-[max(env(safe-area-inset-right),1rem)]"
           >
             {scene === 'viewer' ? (
               <FileViewer
@@ -478,7 +495,20 @@ function App() {
                         )}
                       </div>
 
-                      <TargetPicker category={picked.category} target={target} onChange={setTarget} />
+                      <TargetPicker
+                        category={picked.category}
+                        target={target}
+                        sourceBytes={totalBytes}
+                        onChange={setTarget}
+                      />
+                      {maxBytes !== null && totalBytes > 0 && maxBytes >= totalBytes && (
+                        <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
+                          {t('shrink.fileAlreadyFits', {
+                            size: formatBytes(totalBytes),
+                            limit: formatBytes(maxBytes),
+                          })}
+                        </p>
+                      )}
                       {pngOffered && (
                         <ImageFormatPicker
                           format={imageFormat}
@@ -541,7 +571,7 @@ function App() {
 
           <nav
             aria-label="App scenes"
-            className="z-10 shrink-0 border-t border-[var(--app-border)] bg-[var(--app-shell)] px-4 pt-2 pb-[max(env(safe-area-inset-bottom),0.75rem)]"
+            className="z-10 shrink-0 border-t border-[var(--app-border)] bg-[var(--app-shell)] px-4 pt-2 pb-[max(env(safe-area-inset-bottom),0.75rem)] pl-[max(env(safe-area-inset-left),1rem)] pr-[max(env(safe-area-inset-right),1rem)]"
           >
             <div
               ref={barTrackRef}

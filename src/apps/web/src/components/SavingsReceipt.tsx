@@ -23,20 +23,25 @@ export function SavingsReceipt({
 }: SavingsReceiptProps) {
   const { t } = useI18n()
   const { blob, fileName } = result
-  const savedPercent = Math.max(0, Math.floor((1 - blob.size / originalBytes) * 100))
-  const fits = blob.size <= maxBytes
+  const isReduced = blob.size < originalBytes
+  const isSame = blob.size === originalBytes
+  const fits = blob.size <= maxBytes && !isSame
+  const savedPercent = isReduced
+    ? Math.max(1, Math.round((1 - blob.size / originalBytes) * 100))
+    : 0
+  const savedBytes = isReduced ? originalBytes - blob.size : 0
   const shareable = useMemo(() => canShareFile(blob, fileName), [blob, fileName])
 
   return (
-    <section className={`${CARD} my-auto flex flex-col items-center py-6 text-center`}>
+    <section className={`${CARD} w-full my-auto flex flex-col items-center py-8 px-5 text-center`}>
       <span
         className={`mb-3 flex size-14 items-center justify-center rounded-2xl ${
-          fits
+          isReduced || isSame
             ? 'bg-emerald-500/15 text-emerald-500'
             : 'bg-amber-500/15 text-amber-500'
         }`}
       >
-        {fits ? (
+        {isReduced || isSame ? (
           <svg
             aria-hidden="true"
             viewBox="0 0 24 24"
@@ -79,14 +84,24 @@ export function SavingsReceipt({
         >
           <path d="M5 12h14m-6-6 6 6-6 6" />
         </svg>
-        <span className={fits ? 'text-emerald-500' : 'text-amber-500'}>
+        <span className={isReduced || isSame ? 'text-emerald-500' : 'text-amber-500'}>
           {formatBytes(blob.size)}
         </span>
       </div>
 
-      <p className="mt-1 text-sm font-semibold text-emerald-500">-{savedPercent}%</p>
+      {isReduced && (
+        <p className="mt-1 text-sm font-semibold text-emerald-500">
+          -{savedPercent}% ({formatBytes(savedBytes)})
+        </p>
+      )}
 
-      {!fits && (
+      {isSame && (
+        <p className="mt-1 text-xs font-semibold text-emerald-500">
+          {t('receipt.alreadyOptimal')}
+        </p>
+      )}
+
+      {!fits && !isSame && (
         <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
           {t('receipt.smallestPossible', { size: formatBytes(maxBytes) })}
         </p>

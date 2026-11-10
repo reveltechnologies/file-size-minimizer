@@ -33,6 +33,13 @@ describe('calculateBitrate', () => {
     })
   })
 
+  it('caps bitrate and budget below sourceBytes to prevent file inflation', () => {
+    const sourceBytes = 894 * 1024
+    const plan = calculateBitrate({ maxBytes: 10 * MB, durationSec: 10, sourceBytes })
+    expect(estimateBytes(plan, 10)).toBeLessThan(sourceBytes)
+    expect(plan.videoKbps).toBeLessThan((sourceBytes * 8) / 1000 / 10)
+  })
+
   it('rejects invalid input', () => {
     expect(() => calculateBitrate({ maxBytes: 10 * MB, durationSec: 0 })).toThrow(RangeError)
     expect(() => calculateBitrate({ maxBytes: 0, durationSec: 60 })).toThrow(RangeError)

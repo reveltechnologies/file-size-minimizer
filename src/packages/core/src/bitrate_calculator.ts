@@ -8,6 +8,7 @@ export interface BitrateInput {
   maxBytes: number
   durationSec: number
   audioKbps?: number
+  sourceBytes?: number
 }
 
 export interface BitratePlan {
@@ -22,15 +23,32 @@ export function calculateBitrate({
   maxBytes,
   durationSec,
   audioKbps = DEFAULT_AUDIO_KBPS,
+  sourceBytes,
 }: BitrateInput): BitratePlan {
   if (!(maxBytes > 0)) throw new RangeError(`maxBytes must be positive, got ${maxBytes}`)
   if (!(durationSec > 0)) throw new RangeError(`durationSec must be positive, got ${durationSec}`)
   if (!(audioKbps >= 0)) throw new RangeError(`audioKbps must be zero or more, got ${audioKbps}`)
 
-  const totalKbps = Math.floor((maxBytes * 8 * SAFETY_FACTOR) / 1000 / durationSec)
-  const videoKbps = totalKbps - audioKbps
+  const effectiveMaxBytes =
+    sourceBytes && sourceBytes > 0
+      ? Math.min(maxBytes, Math.floor(sourceBytes * 0.92))
+      : maxBytes
 
-  return { totalKbps, videoKbps, audioKbps, ...quality(videoKbps) }
+  const totalKbps = Math.floor((effectiveMaxBytes * 8 * SAFETY_FACTOR) / 1000 / durationSec)
+  let videoKbps = totalKbps - audioKbps
+
+  if (sourceBytes && sourceBytes > 0) {
+    const sourceTotalKbps = Math.floor((sourceBytes * 8) / 1000 / durationSec)
+    const maxAllowedVideoKbps = Math.max(
+      MIN_BLURRY_VIDEO_KBPS,
+      Math.floor((sourceTotalKbps - audioKbps) * 0.88),
+    )
+    if (videoKbps > maxAllowedVideoKbps) {
+      videoKbps = maxAllowedVideoKbps
+    }
+  }
+
+  return { totalKbps: videoKbps + audioKbps, videoKbps, audioKbps, ...quality(videoKbps) }
 }
 
 export function correctForOvershoot(
@@ -38,11 +56,25 @@ export function correctForOvershoot(
   durationSec: number,
   actualBytes: number,
   maxBytes: number,
+  sourceBytes?: number,
 ): BitratePlan {
+  const effectiveBudget =
+    sourceBytes && sourceBytes > 0 ? Math.min(maxBytes, Math.floor(sourceBytes * 0.92)) : maxBytes
   const actualVideoKbps = (actualBytes * 8) / 1000 / durationSec - plan.audioKbps
   const overshoot = Math.max(1, actualVideoKbps / plan.videoKbps)
-  const budgetVideoKbps = (maxBytes * 8 * SAFETY_FACTOR) / 1000 / durationSec - plan.audioKbps
-  const videoKbps = Math.floor((budgetVideoKbps / overshoot) * 0.97)
+  const budgetVideoKbps = (effectiveBudget * 8 * SAFETY_FACTOR) / 1000 / durationSec - plan.audioKbps
+  let videoKbps = Math.floor((budgetVideoKbps / overshoot) * 0.97)
+
+  if (sourceBytes && sourceBytes > 0) {
+    const sourceTotalKbps = Math.floor((sourceBytes * 8) / 1000 / durationSec)
+    const maxAllowedVideoKbps = Math.max(
+      MIN_BLURRY_VIDEO_KBPS,
+      Math.floor((sourceTotalKbps - plan.audioKbps) * 0.88),
+    )
+    if (videoKbps > maxAllowedVideoKbps) {
+      videoKbps = maxAllowedVideoKbps
+    }
+  }
 
   return {
     totalKbps: videoKbps + plan.audioKbps,

@@ -17,10 +17,11 @@ const PRESET_KEY: Record<PresetId, TranslationKey> = {
 interface TargetPickerProps {
   category: FileCategory
   target: Target
+  sourceBytes?: number
   onChange: (target: Target) => void
 }
 
-export function TargetPicker({ category, target, onChange }: TargetPickerProps) {
+export function TargetPicker({ category, target, sourceBytes, onChange }: TargetPickerProps) {
   const { t } = useI18n()
   const isCustom = target.choice === 'custom'
 
@@ -30,20 +31,31 @@ export function TargetPicker({ category, target, onChange }: TargetPickerProps) 
         {t('shrink.fitUnder')}
       </legend>
       <div className="grid grid-cols-2 gap-2">
-        {presetsFor(category).map((preset) => (
-          <button
-            key={preset.id}
-            type="button"
-            aria-pressed={target.choice === preset.id}
-            onClick={() => onChange({ ...target, choice: preset.id })}
-            className={choiceClass(target.choice === preset.id)}
-          >
-            <span className="block truncate font-semibold">
-              {t(PRESET_KEY[preset.id as PresetId])}
-            </span>
-            <span className="block text-xs opacity-80">&lt; {formatBytes(preset.maxBytes)}</span>
-          </button>
-        ))}
+        {presetsFor(category).map((preset) => {
+          const active = target.choice === preset.id
+          const alreadyFits = Boolean(sourceBytes && sourceBytes > 0 && preset.maxBytes >= sourceBytes)
+          return (
+            <button
+              key={preset.id}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onChange({ ...target, choice: preset.id })}
+              className={choiceClass(active)}
+            >
+              <div className="flex items-center justify-between gap-1">
+                <span className="block truncate font-semibold">
+                  {t(PRESET_KEY[preset.id as PresetId])}
+                </span>
+                {alreadyFits && (
+                  <span className="rounded-md bg-emerald-500/15 px-1 py-0.5 text-[9px] font-semibold text-emerald-500 shrink-0">
+                    {t('shrink.alreadyFits')}
+                  </span>
+                )}
+              </div>
+              <span className="block text-xs opacity-80">&lt; {formatBytes(preset.maxBytes)}</span>
+            </button>
+          )
+        })}
         <button
           type="button"
           aria-pressed={isCustom}

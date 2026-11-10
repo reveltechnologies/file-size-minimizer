@@ -110,15 +110,18 @@ export function SettingsPanel({
           {t('settings.theme')}
         </h2>
         <div className="grid grid-cols-2 gap-2">
-          {THEMES.map((item) => {
+          {THEMES.map((item, index) => {
             const active = theme === item.id
+            const isLastOdd = index === THEMES.length - 1 && THEMES.length % 2 !== 0
             return (
               <button
                 key={item.id}
                 type="button"
                 aria-pressed={active}
                 onClick={() => onChangeSettings({ ...settings, theme: item.id })}
-                className="flex min-h-11 items-center gap-2.5 rounded-2xl border px-3 py-2 text-left text-xs font-semibold transition active:scale-[0.98]"
+                className={`flex min-h-11 items-center gap-2.5 rounded-2xl border px-3 py-2 text-left text-xs font-semibold transition active:scale-[0.98] ${
+                  isLastOdd ? 'col-span-2' : ''
+                }`}
                 style={
                   active
                     ? {
@@ -328,7 +331,7 @@ export function SettingsPanel({
           <div>
             <p className="font-semibold">{t('settings.openSourceLocal')}</p>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              {t('settings.noExternalData')} · v1.0.2
+              {t('settings.noExternalData')} · v1.0.3
             </p>
           </div>
           <a

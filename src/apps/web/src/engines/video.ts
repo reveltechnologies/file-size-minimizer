@@ -53,7 +53,7 @@ export async function compressVideo(job: CompressJob): Promise<CompressResult> {
     if (!durationSec) throw new Error("Couldn't determine video duration.")
 
     const audioKbps = options.muteAudio || !info.hasAudio ? 0 : DEFAULT_AUDIO_KBPS
-    let plan = calculateBitrate({ maxBytes, durationSec, audioKbps })
+    let plan = calculateBitrate({ maxBytes, durationSec, audioKbps, sourceBytes: file.size })
     const tip = audioKbps > 0 ? 'Try Mute audio or a bigger target.' : 'Try a bigger target.'
     if (!plan.possible) {
       throw new Error(`Video is too long to fit under ${formatBytes(maxBytes)}. ${tip}`)
@@ -63,6 +63,8 @@ export async function compressVideo(job: CompressJob): Promise<CompressResult> {
     }
 
     onStep('shrink')
+    let bestData: Uint8Array | null = null
+
     for (let attempt = 1; ; attempt++) {
       onStatus(attempt === 1 ? 'Encoding video…' : 'Adjusting bitrate…')
       onProgress(0)
@@ -79,10 +81,34 @@ export async function compressVideo(job: CompressJob): Promise<CompressResult> {
       const data = await ffmpeg.readFile(output)
       if (typeof data === 'string') throw new Error('Unexpected encoder output.')
 
-      const retry = attempt < MAX_ATTEMPTS ? correctForOvershoot(plan, durationSec, data.byteLength, maxBytes) : null
-      if (data.byteLength <= maxBytes || !retry?.possible) {
+      if (!bestData || data.byteLength < bestData.byteLength) {
+        bestData = data.slice()
+      }
+
+      const fitsTarget = data.byteLength <= maxBytes
+      const reducedSize = data.byteLength < file.size
+      const retry =
+        attempt < MAX_ATTEMPTS
+          ? correctForOvershoot(plan, durationSec, data.byteLength, maxBytes, file.size)
+          : null
+
+      if ((fitsTarget && reducedSize) || !retry?.possible || attempt >= MAX_ATTEMPTS) {
+        if (bestData && bestData.byteLength < file.size) {
+          return {
+            blob: new Blob([bestData.slice()], { type: outputMimeType('video') }),
+            fileName: outputFileName(file.name, 'video'),
+          }
+        }
+
+        if (file.size <= maxBytes && !options.muteAudio) {
+          return {
+            blob: file,
+            fileName: outputFileName(file.name, 'video'),
+          }
+        }
+
         return {
-          blob: new Blob([data.slice()], { type: outputMimeType('video') }),
+          blob: new Blob([(bestData ?? data).slice()], { type: outputMimeType('video') }),
           fileName: outputFileName(file.name, 'video'),
         }
       }

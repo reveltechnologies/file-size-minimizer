@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2026-11-10
+
+### Fixed
+- Fixed mobile UI sizing issue on Android phones where a hardcoded max-width constraint caused pillarbox black borders and restricted content width on devices wider than 430px.
+- Set base viewport background to the theme shell color on mobile and native Capacitor platforms, eliminating dark border artifacts on high-resolution displays.
+- Added horizontal safe-area insets (`safe-area-inset-left`, `safe-area-inset-right`) across header, content scroll view, and bottom navigation bar.
+- Added bottom scroll padding to prevent content crowding above the bottom scene navigation bar.
+- Balanced settings theme selection grid layout so lone trailing options span full width.
+- Fixed file size inflation bug where files smaller than a chosen preset (e.g. an 894 KB video under a 10 MB limit) were re-encoded at high bitrates, causing output files to expand instead of shrink.
+- Added strict size-reduction guarantees across video and image encoders: target bitrates and byte budgets are automatically capped below the source file's size and bitrate, and compressors will never return an output larger than the input file.
+- Enhanced target picker to default to a sub-source target when all standard presets exceed the input file size, and added "Already fits" indicators on presets larger than the file.
+- Corrected savings receipt to prevent false-positive green checkmarks and `-0%` savings when an output matches or cannot be reduced below the source size.
+
+### Changed
+- Bumped Android release to `1.0.3` (`versionCode 4`) for Google Play rollout.
+
 ## [1.0.2] - 2026-11-09
 
 ### Changed

@@ -8,9 +8,34 @@ export interface Target {
   customUnit: SizeUnit
 }
 
-export function defaultTarget(category: FileCategory): Target {
+export function defaultTarget(category: FileCategory, sourceBytes?: number): Target {
+  const presets = presetsFor(category)
+  if (sourceBytes && sourceBytes > 0) {
+    const fittingPreset = presets.find((p) => p.maxBytes < sourceBytes)
+    if (fittingPreset) {
+      return {
+        choice: fittingPreset.id,
+        customValue: '',
+        customUnit: category === 'image' || sourceBytes < 1000 * 1000 ? 'KB' : 'MB',
+      }
+    }
+    const halfBytes = Math.max(10 * KB, Math.floor(sourceBytes * 0.5))
+    if (halfBytes < 1000 * 1000) {
+      return {
+        choice: 'custom',
+        customValue: String(Math.round(halfBytes / KB)),
+        customUnit: 'KB',
+      }
+    }
+    return {
+      choice: 'custom',
+      customValue: String(Number((halfBytes / MB).toFixed(1))),
+      customUnit: 'MB',
+    }
+  }
+
   return {
-    choice: presetsFor(category)[0].id,
+    choice: presets[0].id,
     customValue: '',
     customUnit: category === 'image' ? 'KB' : 'MB',
   }

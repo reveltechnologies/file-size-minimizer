@@ -36,7 +36,8 @@ async function compressToJpeg(job: CompressJob): Promise<CompressResult> {
   }
 
   const exif = !options.stripHiddenData && isJpeg(original) ? extractExif(original) : null
-  const budget = maxBytes - (exif?.length ?? 0)
+  const effectiveMaxBytes = Math.min(maxBytes, file.size)
+  const budget = effectiveMaxBytes - (exif?.length ?? 0)
 
   const bitmap = await decodeImage(file, onStatus)
   try {
@@ -56,12 +57,24 @@ async function compressToJpeg(job: CompressJob): Promise<CompressResult> {
       imageScaleRange(bitmap.width, bitmap.height),
     )
     if (!fitted) {
+      if (original.length <= maxBytes && isJpeg(original)) {
+        return toResult(options.stripHiddenData ? (stripJpegMetadata(original) ?? original) : original)
+      }
       throw new Error(`Couldn't fit photo under ${formatBytes(maxBytes)}.`)
     }
 
     onProgress(1)
-    if (!exif) return { blob: fitted.output, fileName }
-    return toResult(insertExif(new Uint8Array(await fitted.output.arrayBuffer()), exif))
+    if (!exif) {
+      if (fitted.output.size >= original.length && original.length <= maxBytes && isJpeg(original)) {
+        return toResult(options.stripHiddenData ? (stripJpegMetadata(original) ?? original) : original)
+      }
+      return { blob: fitted.output, fileName }
+    }
+    const inserted = insertExif(new Uint8Array(await fitted.output.arrayBuffer()), exif)
+    if (inserted.length >= original.length && original.length <= maxBytes && isJpeg(original)) {
+      return toResult(options.stripHiddenData ? (stripJpegMetadata(original) ?? original) : original)
+    }
+    return toResult(inserted)
   } finally {
     bitmap.close()
   }
@@ -86,6 +99,7 @@ async function compressToPng(job: CompressJob): Promise<CompressResult> {
     onStatus('Compressing…')
     const render = createImageRenderer(bitmap, 'png')
     let attempts = 0
+    const effectiveMaxBytes = Math.min(maxBytes, file.size)
     const fitted = await fitLosslessImageToSize(
       async (scale) => {
         signal.throwIfAborted()
@@ -93,14 +107,26 @@ async function compressToPng(job: CompressJob): Promise<CompressResult> {
         onProgress(Math.min(0.95, ++attempts / 4))
         return { output: blob, bytes: blob.size }
       },
-      maxBytes,
+      effectiveMaxBytes,
       imageScaleRange(bitmap.width, bitmap.height),
     )
     if (!fitted) {
+      if (original.length <= maxBytes && isPng(original)) {
+        return {
+          blob: new Blob([options.stripHiddenData ? (stripPngMetadata(original) ?? original) : original], { type: outputMimeType('image', 'png') }),
+          fileName,
+        }
+      }
       throw new Error(`Couldn't fit PNG under ${formatBytes(maxBytes)}. Try JPG.`)
     }
 
     onProgress(1)
+    if (fitted.output.size >= original.length && original.length <= maxBytes && isPng(original)) {
+      return {
+        blob: new Blob([options.stripHiddenData ? (stripPngMetadata(original) ?? original) : original], { type: outputMimeType('image', 'png') }),
+        fileName,
+      }
+    }
     return { blob: fitted.output, fileName }
   } finally {
     bitmap.close()

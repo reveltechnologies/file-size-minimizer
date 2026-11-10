@@ -14,6 +14,16 @@ describe('defaultTarget', () => {
     expect(defaultTarget('image')).toEqual({ choice: 'portal-id', customValue: '', customUnit: 'KB' })
     expect(defaultTarget('pdf')).toEqual({ choice: 'visa-portal', customValue: '', customUnit: 'MB' })
   })
+
+  it('selects smaller preset or custom target when sourceBytes is provided', () => {
+    const target894 = defaultTarget('video', 894 * 1024)
+    expect(target894.choice).toBe('custom')
+    expect(Number(target894.customValue)).toBeLessThan(894)
+    expect(target894.customUnit).toBe('KB')
+
+    const target50MB = defaultTarget('video', 50 * MB)
+    expect(target50MB.choice).toBe('discord')
+  })
 })
 
 describe('targetBytes', () => {
