@@ -1,22 +1,32 @@
-export const CARD =
-  'rounded-3xl border border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-sm'
+export const SECTION_HEAD = 'text-xs font-medium text-[var(--app-text-muted)]'
 
-export const SUBTLE_BOX =
-  'rounded-2xl border border-[var(--app-border)] bg-[var(--app-subtle)]'
+export const DIVIDER_LIST = 'divide-y divide-[var(--app-border)]'
 
 export const PRIMARY_BUTTON =
-  'w-full rounded-2xl bg-emerald-600 px-5 py-3.5 text-base font-semibold text-white shadow-sm transition active:scale-[0.98] active:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100'
+  'inline-flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-[var(--app-accent)] px-4 text-[15px] font-semibold text-white transition-colors hover:bg-[var(--app-accent-hover)] active:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-accent)] disabled:cursor-not-allowed disabled:opacity-45'
 
 export const SECONDARY_BUTTON =
-  'w-full rounded-2xl border border-[var(--app-border)] bg-[var(--app-subtle)] px-5 py-3.5 text-base font-semibold text-slate-800 transition active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:text-slate-100'
+  'inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-[var(--app-border-strong)] bg-[var(--app-surface)] px-4 text-sm font-medium text-[var(--app-text)] transition-colors hover:bg-[var(--app-surface-2)] active:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-accent)] disabled:cursor-not-allowed disabled:opacity-45'
 
-export function choiceClass(active: boolean): string {
-  return `min-h-14 rounded-2xl border px-3.5 py-2.5 text-left text-sm transition active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 ${
-    active
-      ? 'border-emerald-500 bg-emerald-600 text-white shadow-xs'
-      : 'border-[var(--app-border)] bg-[var(--app-subtle)] text-slate-900 dark:text-slate-100'
-  }`
-}
+export const ICON_BUTTON =
+  'inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-[var(--app-text-muted)] transition-colors hover:bg-[var(--app-surface-2)] hover:text-[var(--app-text)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--app-accent)]'
+
+export const INPUT_CLASS =
+  'rounded-lg border border-[var(--app-border-strong)] bg-[var(--app-surface)] px-3 py-2 text-sm text-[var(--app-text)] placeholder:text-[var(--app-text-muted)] transition-colors focus:border-[var(--app-accent)] focus:outline-none'
+
+export const SELECT_CLASS =
+  'h-9 rounded-lg border border-[var(--app-border-strong)] bg-[var(--app-surface)] px-2.5 text-sm font-medium text-[var(--app-text)] transition-colors focus:border-[var(--app-accent)] focus:outline-none'
 
 export const WARNING =
-  'rounded-2xl border border-amber-300 bg-amber-50 px-3.5 py-3 text-xs leading-relaxed text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200'
+  'rounded-lg border border-[var(--app-warn-border)] bg-[var(--app-warn-soft)] px-3 py-2.5 text-xs leading-relaxed text-[var(--app-warn)]'
+
+export const ERROR_BOX =
+  'rounded-lg border border-[var(--app-danger-border)] bg-[var(--app-danger-soft)] px-3 py-2.5 text-xs leading-relaxed text-[var(--app-danger)]'
+
+export function segmentClass(active: boolean): string {
+  return `rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--app-accent)] ${
+    active
+      ? 'bg-[var(--app-bg)] text-[var(--app-text)] shadow-2xs'
+      : 'text-[var(--app-text-muted)] hover:text-[var(--app-text)]'
+  }`
+}

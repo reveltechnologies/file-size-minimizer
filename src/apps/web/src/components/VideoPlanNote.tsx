@@ -1,4 +1,4 @@
-import { formatBytes, pickOutputSize, type BitratePlan } from '@revel/core'
+import { formatBytes, shortSideCap, type BitratePlan } from '@revel/core'
 import { useI18n } from '../lib/i18n'
 import type { VideoInfo } from '../lib/probeVideo'
 import { WARNING } from './styles'
@@ -8,6 +8,7 @@ interface VideoPlanNoteProps {
   plan: BitratePlan
   maxBytes: number
   smartOptimize: boolean
+  videoMaxHeight?: number | null
   allowBlurry: boolean
   onAllowBlurryChange: (allowBlurry: boolean) => void
 }
@@ -17,6 +18,7 @@ export function VideoPlanNote({
   plan,
   maxBytes,
   smartOptimize,
+  videoMaxHeight,
   allowBlurry,
   onAllowBlurryChange,
 }: VideoPlanNoteProps) {
@@ -31,7 +33,20 @@ export function VideoPlanNote({
     )
   }
 
-  const size = smartOptimize ? pickOutputSize(plan.videoKbps, info) : info
+  const cap =
+    videoMaxHeight === 0
+      ? null
+      : videoMaxHeight != null
+        ? videoMaxHeight
+        : smartOptimize
+          ? shortSideCap(plan.videoKbps)
+          : null
+  const scale = cap ? Math.min(1, cap / Math.min(info.width, info.height)) : 1
+  const size = {
+    width: Math.max(2, Math.floor((info.width * scale) / 2) * 2),
+    height: Math.max(2, Math.floor((info.height * scale) / 2) * 2),
+  }
+
   if (!plan.feasible) {
     return (
       <div className={`${WARNING} flex flex-col gap-2`}>
@@ -42,12 +57,12 @@ export function VideoPlanNote({
             height: size.height,
           })}
         </p>
-        <label className="flex cursor-pointer items-center gap-2 font-medium">
+        <label className="flex cursor-pointer items-center gap-2 font-medium text-[var(--app-text)]">
           <input
             type="checkbox"
             checked={allowBlurry}
             onChange={(event) => onAllowBlurryChange(event.target.checked)}
-            className="size-4 shrink-0 accent-amber-600"
+            className="size-4 shrink-0 rounded accent-[var(--app-warn)]"
           />
           <span>{t('video.allowLowQuality')}</span>
         </label>
@@ -55,11 +70,7 @@ export function VideoPlanNote({
     )
   }
 
-  return (
-    <p className="text-xs text-slate-500 dark:text-slate-400">
-      {duration} · {plan.videoKbps} kbps · {size.width}×{size.height}
-    </p>
-  )
+  return null
 }
 
 function formatDuration(seconds: number): string {

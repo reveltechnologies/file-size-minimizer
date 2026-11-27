@@ -1,6 +1,6 @@
 # Terms of Use
 
-_Last updated: November 8, 2026_
+_Last updated: November 27, 2026_
 
 By using **File Size Minimizer** ("the App") by [Revel Technologies](https://github.com/reveltechnologies), you agree to these Terms of Use.
 
@@ -10,11 +10,11 @@ The App is open-source software licensed under the [GNU General Public License v
 
 ## 2. Local Processing
 
-All compression, metadata removal, and file viewing run locally on your device. No files or personal data are uploaded or collected. See our [Privacy Policy](PRIVACY_POLICY.md).
+All file compression, format conversion, metadata removal, and file viewing across photos, videos, PDFs, and text/code files run locally on your device. No files or personal data are uploaded or collected. On Android, an optional update notification checks Google Play locally via the Play Store app. See our [Privacy Policy](PRIVACY_POLICY.md).
 
 ## 3. Backups & File Changes
 
-Compression reduces resolution, bitrate, or quality to fit a target size, and metadata removal strips EXIF, GPS, and document history from the output file. Keep backups of your original files and verify output files before deleting originals.
+Compression, optional resizing or format conversion (`JPG`, `WebP`, `PNG`), black-and-white conversion, text/code minification or `.gz` compression, and metadata removal alter the output file to reduce size or strip hidden data. Keep backups of your original files and verify output files before deleting originals.
 
 ## 4. Disclaimer of Warranties
 

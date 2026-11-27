@@ -20,8 +20,24 @@ export function buildVideoArgs({
   if (audioKbps > 0) args.push('-map', '0:a:0?')
 
   args.push('-c:v', 'libx264', '-preset', 'veryfast', '-b:v', `${videoKbps}k`)
-  args.push('-pix_fmt', 'yuv420p', '-vf', scaleFilter(options.smartOptimize ? shortSideCap(videoKbps) : null))
-  if (options.smartOptimize) args.push('-fpsmax', String(MAX_SMART_FPS))
+
+  const scaleCap =
+    options.videoMaxHeight === 0
+      ? null
+      : options.videoMaxHeight != null
+        ? options.videoMaxHeight
+        : options.smartOptimize
+          ? shortSideCap(videoKbps)
+          : null
+  args.push('-pix_fmt', 'yuv420p', '-vf', scaleFilter(scaleCap))
+
+  if (options.videoMaxFps !== undefined) {
+    if (options.videoMaxFps !== null && options.videoMaxFps > 0) {
+      args.push('-fpsmax', String(options.videoMaxFps))
+    }
+  } else if (options.smartOptimize) {
+    args.push('-fpsmax', String(MAX_SMART_FPS))
+  }
 
   if (audioKbps > 0) args.push('-c:a', 'aac', '-b:a', `${audioKbps}k`)
   else args.push('-an')

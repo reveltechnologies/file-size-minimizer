@@ -25,10 +25,10 @@ export function DropZone({ onFiles }: DropZoneProps) {
         const files = [...event.dataTransfer.files]
         if (files.length > 0) onFiles(files)
       }}
-      className={`flex flex-1 cursor-pointer flex-col items-center justify-center gap-3 rounded-3xl border-2 border-dashed px-5 py-10 text-center transition active:scale-[0.99] focus-within:ring-2 focus-within:ring-emerald-500 ${
+      className={`flex flex-1 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl px-5 py-10 text-center transition-colors focus-within:ring-2 focus-within:ring-[var(--app-accent)] ${
         dragging
-          ? 'border-emerald-500 bg-emerald-500/10'
-          : 'border-[var(--app-border)] bg-[var(--app-card)]'
+          ? 'border-2 border-dashed border-[var(--app-accent)] bg-[var(--app-accent-soft)]'
+          : 'border-2 border-transparent'
       }`}
     >
       <input
@@ -42,22 +42,24 @@ export function DropZone({ onFiles }: DropZoneProps) {
           event.target.value = ''
         }}
       />
-      <span className="flex size-16 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-500">
+      <span className="flex size-12 items-center justify-center rounded-full bg-[var(--app-surface)] text-[var(--app-text-muted)]">
         <svg
           aria-hidden="true"
           viewBox="0 0 24 24"
-          className="size-8"
+          className="size-6"
           fill="none"
           stroke="currentColor"
-          strokeWidth="2"
+          strokeWidth="1.8"
           strokeLinecap="round"
           strokeLinejoin="round"
         >
           <path d="M12 16V4m0 0-4 4m4-4 4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
         </svg>
       </span>
-      <span className="text-base font-bold tracking-tight">{t('dropzone.selectFile')}</span>
-      <span className="text-xs text-slate-500 dark:text-slate-400">
+      <span className="inline-flex items-center rounded-lg border border-[var(--app-border-strong)] bg-[var(--app-surface)] px-4 py-2 text-sm font-medium text-[var(--app-text)] transition-colors hover:bg-[var(--app-surface-2)]">
+        {t('dropzone.selectFile')}
+      </span>
+      <span className="text-xs text-[var(--app-text-muted)]">
         {t('dropzone.supportedTypes')}
       </span>
     </label>

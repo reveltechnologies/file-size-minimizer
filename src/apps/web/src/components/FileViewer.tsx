@@ -1,11 +1,12 @@
-import { formatBytes } from '@revel/core'
-import { useEffect, useMemo, useState } from 'react'
+import { detectCategory, formatBytes } from '@revel/core'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { parseDelimited } from '../lib/csv'
 import type { HistoryEntry } from '../lib/historyStore'
 import { useI18n } from '../lib/i18n'
 import { downloadBlob } from '../lib/saveFile'
 import type { OutputLocationMode } from '../lib/settingsStore'
 import { RecentFilesCard } from './RecentFilesCard'
-import { CARD, SUBTLE_BOX } from './styles'
+import { ERROR_BOX, ICON_BUTTON, INPUT_CLASS } from './styles'
 
 const MAX_TEXT_PREVIEW_BYTES = 1_500_000
 const MAX_HEX_PREVIEW_BYTES = 4_096
@@ -24,11 +25,19 @@ interface LoadedFileState {
   error: string | null
 }
 
+export interface ExternalViewerFile {
+  id: number
+  file: File
+}
+
 interface FileViewerProps {
   recentViewed: HistoryEntry[]
   outputLocationMode: OutputLocationMode
+  externalFile?: ExternalViewerFile | null
   onFileViewed: (file: File) => void
   onClearViewed: () => void
+  onShrinkFile?: (file: File) => void
+  onNotify?: (message: string) => void
 }
 
 const TEXT_EXTENSIONS = new Set([
@@ -87,6 +96,9 @@ const TEXT_EXTENSIONS = new Set([
   'properties',
   'gradle',
 ])
+
+const TOOL_BUTTON =
+  'cursor-pointer rounded-md border border-[var(--app-border)] bg-[var(--app-surface)] px-2.5 py-1 text-xs font-medium text-[var(--app-text)] transition-colors hover:bg-[var(--app-surface-2)]'
 
 function getExtension(name: string): string {
   const dot = name.lastIndexOf('.')
@@ -147,19 +159,14 @@ function formatHexDump(bytes: Uint8Array): string {
   return lines.join('\n')
 }
 
-function parseDelimited(text: string, delimiter: string): string[][] {
-  return text
-    .split(/\r?\n/)
-    .filter((line) => line.length > 0)
-    .slice(0, 200)
-    .map((line) => line.split(delimiter))
-}
-
 export function FileViewer({
   recentViewed,
   outputLocationMode,
+  externalFile = null,
   onFileViewed,
   onClearViewed,
+  onShrinkFile,
+  onNotify,
 }: FileViewerProps) {
   const { t } = useI18n()
   const [dragging, setDragging] = useState(false)
@@ -171,6 +178,8 @@ export function FileViewer({
   const [csvMode, setCsvMode] = useState<'table' | 'raw'>('table')
   const [binaryMode, setBinaryMode] = useState<'text' | 'hex'>('text')
   const [prettyJson, setPrettyJson] = useState(true)
+  const [imageZoom, setImageZoom] = useState(false)
+  const lastExternalIdRef = useRef<number | null>(null)
 
   useEffect(() => {
     return () => {
@@ -179,12 +188,12 @@ export function FileViewer({
   }, [state?.objectUrl])
 
   async function openFile(file: File, recordHistory = true) {
-    if (state?.objectUrl) URL.revokeObjectURL(state.objectUrl)
     setSearch('')
     setCopied(false)
     setCsvMode('table')
     setBinaryMode('text')
     setPrettyJson(true)
+    setImageZoom(false)
 
     if (recordHistory) onFileViewed(file)
 
@@ -277,6 +286,12 @@ export function FileViewer({
     }
   }
 
+  useEffect(() => {
+    if (!externalFile || externalFile.id === lastExternalIdRef.current) return
+    lastExternalIdRef.current = externalFile.id
+    void Promise.resolve().then(() => openFile(externalFile.file, false))
+  })
+
   function handleOpenFromHistory(entry: HistoryEntry) {
     const file = new File([entry.blob], entry.fileName, {
       type: entry.mimeType || entry.blob.type,
@@ -284,7 +299,7 @@ export function FileViewer({
     void openFile(file, true)
   }
 
-  const displayedText = useMemo(() => {
+  const baseText = useMemo(() => {
     if (!state) return ''
     let content = state.textContent
     if (state.kind === 'json' && prettyJson) {
@@ -294,35 +309,48 @@ export function FileViewer({
         // Keep raw text.
       }
     }
+    return content
+  }, [state, prettyJson])
+
+  const displayedText = useMemo(() => {
+    if (!baseText) return ''
     if (search.trim()) {
       const q = search.toLowerCase()
-      return content
+      return baseText
         .split(/\r?\n/)
         .filter((line) => line.toLowerCase().includes(q))
         .join('\n')
     }
-    return content
-  }, [state, prettyJson, search])
+    return baseText
+  }, [baseText, search])
 
-  const lineCount = useMemo(() => {
-    if (!displayedText) return 0
-    return displayedText.split(/\r?\n/).length
-  }, [displayedText])
+  const totalLines = useMemo(() => (baseText ? baseText.split(/\r?\n/).length : 0), [baseText])
+  const shownLines = useMemo(
+    () => (displayedText ? displayedText.split(/\r?\n/).length : 0),
+    [displayedText],
+  )
 
   async function handleCopy() {
     if (!displayedText) return
     try {
       await navigator.clipboard.writeText(displayedText)
       setCopied(true)
+      onNotify?.(t('viewer.copied'))
       setTimeout(() => setCopied(false), 1500)
     } catch {
       // Ignore clipboard permission errors.
     }
   }
 
+  async function handleSave() {
+    if (!state) return
+    const outcome = await downloadBlob(state.file, state.file.name, outputLocationMode)
+    if (outcome === 'saved') onNotify?.(t('common.saved'))
+  }
+
   if (!state) {
     return (
-      <div className="flex flex-1 flex-col gap-3.5">
+      <div className="flex flex-1 flex-col gap-4">
         <label
           onDragOver={(event) => {
             event.preventDefault()
@@ -335,10 +363,10 @@ export function FileViewer({
             const file = event.dataTransfer.files[0]
             if (file) void openFile(file)
           }}
-          className={`flex flex-1 cursor-pointer flex-col items-center justify-center gap-3 rounded-3xl border-2 border-dashed px-5 py-10 text-center transition active:scale-[0.99] focus-within:ring-2 focus-within:ring-emerald-500 ${
+          className={`flex flex-1 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl px-5 py-10 text-center transition-colors focus-within:ring-2 focus-within:ring-[var(--app-accent)] ${
             dragging
-              ? 'border-emerald-500 bg-emerald-500/10'
-              : 'border-[var(--app-border)] bg-[var(--app-card)]'
+              ? 'border-2 border-dashed border-[var(--app-accent)] bg-[var(--app-accent-soft)]'
+              : 'border-2 border-transparent'
           }`}
         >
           <input
@@ -350,14 +378,14 @@ export function FileViewer({
               event.target.value = ''
             }}
           />
-          <span className="flex size-16 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-500">
+          <span className="flex size-12 items-center justify-center rounded-full bg-[var(--app-surface)] text-[var(--app-text-muted)]">
             <svg
               aria-hidden="true"
               viewBox="0 0 24 24"
-              className="size-8"
+              className="size-6"
               fill="none"
               stroke="currentColor"
-              strokeWidth="2"
+              strokeWidth="1.8"
               strokeLinecap="round"
               strokeLinejoin="round"
             >
@@ -365,8 +393,10 @@ export function FileViewer({
               <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
             </svg>
           </span>
-          <span className="text-base font-bold tracking-tight">{t('viewer.openFile')}</span>
-          <span className="text-xs text-slate-500 dark:text-slate-400">
+          <span className="inline-flex items-center rounded-lg border border-[var(--app-border-strong)] bg-[var(--app-surface)] px-4 py-2 text-sm font-medium text-[var(--app-text)] transition-colors hover:bg-[var(--app-surface-2)]">
+            {t('viewer.openFile')}
+          </span>
+          <span className="text-xs text-[var(--app-text-muted)]">
             {t('viewer.supportedTypes')}
           </span>
         </label>
@@ -377,6 +407,7 @@ export function FileViewer({
           outputLocationMode={outputLocationMode}
           onOpen={handleOpenFromHistory}
           onClear={onClearViewed}
+          onNotify={onNotify}
         />
       </div>
     )
@@ -385,23 +416,35 @@ export function FileViewer({
   const fontSizeClass =
     fontSize === 'xs' ? 'text-xs' : fontSize === 'sm' ? 'text-sm' : 'text-base'
 
+  const extLabel = (getExtension(state.file.name) || state.kind).toUpperCase()
+  const shrinkable =
+    Boolean(onShrinkFile) && detectCategory(state.file.name, state.file.type) !== null
+
   return (
-    <section className={`${CARD} flex flex-1 flex-col gap-3 overflow-hidden`}>
-      <div className={`${SUBTLE_BOX} flex items-center justify-between gap-2 px-3 py-2`}>
+    <section className="flex min-h-0 flex-1 flex-col gap-3">
+      <div className="flex items-center justify-between gap-2 border-b border-[var(--app-border)] pb-2.5">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-semibold">{state.file.name}</p>
-          <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
-            {(getExtension(state.file.name) || state.kind).toUpperCase()} ·{' '}
-            {formatBytes(state.file.size)}
+          <p className="truncate text-sm font-medium text-[var(--app-text)]">{state.file.name}</p>
+          <p className="truncate text-xs tabular-nums text-[var(--app-text-muted)]">
+            {extLabel} · {formatBytes(state.file.size)}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1">
+          {shrinkable && onShrinkFile && (
+            <button
+              type="button"
+              onClick={() => onShrinkFile(state.file)}
+              className="cursor-pointer rounded-md border border-[var(--app-border-strong)] bg-[var(--app-surface)] px-2.5 py-1 text-xs font-medium text-[var(--app-text)] transition-colors hover:bg-[var(--app-surface-2)]"
+            >
+              {t('common.shrinkThis')}
+            </button>
+          )}
           <button
             type="button"
-            onClick={() => void downloadBlob(state.file, state.file.name, outputLocationMode)}
+            onClick={() => void handleSave()}
             aria-label={t('common.download')}
             title={t('common.download')}
-            className="flex size-8 items-center justify-center rounded-xl bg-emerald-600 text-white active:scale-95"
+            className={ICON_BUTTON}
           >
             <svg
               aria-hidden="true"
@@ -409,7 +452,7 @@ export function FileViewer({
               className="size-4"
               fill="none"
               stroke="currentColor"
-              strokeWidth="2.2"
+              strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
             >
@@ -421,7 +464,7 @@ export function FileViewer({
             onClick={() => setState(null)}
             aria-label={t('common.close')}
             title={t('common.close')}
-            className="flex size-8 items-center justify-center rounded-xl border border-[var(--app-border)] active:scale-95"
+            className={ICON_BUTTON}
           >
             <svg
               aria-hidden="true"
@@ -429,7 +472,7 @@ export function FileViewer({
               className="size-4"
               fill="none"
               stroke="currentColor"
-              strokeWidth="2.2"
+              strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
             >
@@ -440,39 +483,43 @@ export function FileViewer({
       </div>
 
       {state.loading ? (
-        <div className="my-auto py-12 text-center text-xs text-slate-500 dark:text-slate-400">
+        <div className="my-auto py-12 text-center text-xs text-[var(--app-text-muted)]">
           {t('common.loading')}
         </div>
       ) : state.error ? (
-        <div className="rounded-2xl border border-red-300 bg-red-50 px-3.5 py-3 text-xs text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200">
-          {state.error}
-        </div>
+        <div className={ERROR_BOX}>{state.error}</div>
       ) : state.kind === 'image' && state.objectUrl ? (
-        <div className={`${SUBTLE_BOX} flex flex-1 flex-col items-center justify-center overflow-auto p-2`}>
+        <div
+          data-no-swipe="true"
+          data-scrollable="true"
+          className="flex flex-1 flex-col items-center justify-center overflow-auto rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] p-2"
+        >
           <img
             src={state.objectUrl}
             alt={state.file.name}
-            className="max-h-[58dvh] w-auto rounded-xl object-contain"
+            onClick={() => setImageZoom((z) => !z)}
+            className={
+              imageZoom
+                ? 'max-w-none cursor-zoom-out'
+                : 'max-h-[60dvh] w-auto cursor-zoom-in object-contain'
+            }
           />
         </div>
       ) : state.kind === 'video' && state.objectUrl ? (
-        <div className="flex flex-1 flex-col items-center justify-center rounded-2xl bg-black p-2">
-          <video
-            src={state.objectUrl}
-            controls
-            playsInline
-            className="max-h-[58dvh] w-full rounded-xl"
-          />
+        <div className="flex flex-1 flex-col items-center justify-center overflow-hidden rounded-lg border border-[var(--app-border)] bg-black p-1">
+          <video src={state.objectUrl} controls playsInline className="max-h-[60dvh] w-full" />
         </div>
       ) : state.kind === 'audio' && state.objectUrl ? (
-        <div className="my-auto flex flex-col items-center gap-4 py-8">
+        <div className="my-auto py-6">
           <audio src={state.objectUrl} controls className="w-full" />
         </div>
       ) : state.kind === 'pdf' ? (
-        <div className="flex flex-1 flex-col gap-2.5">
+        <div className="flex flex-1 flex-col gap-2">
           {state.pdfInfo && (
-            <div className={`${SUBTLE_BOX} flex items-center justify-between px-3 py-2 text-xs`}>
-              <span>{t('viewer.pages', { count: state.pdfInfo.pageCount })}</span>
+            <div className="flex items-center justify-between gap-2 text-xs text-[var(--app-text-muted)]">
+              <span className="tabular-nums">
+                {t('viewer.pages', { count: state.pdfInfo.pageCount })}
+              </span>
               {state.pdfInfo.title && <span className="truncate">{state.pdfInfo.title}</span>}
             </div>
           )}
@@ -480,19 +527,19 @@ export function FileViewer({
             <iframe
               src={state.objectUrl}
               title={state.file.name}
-              className="min-h-[50dvh] w-full flex-1 rounded-2xl border border-[var(--app-border)] bg-white"
+              className="min-h-[54dvh] w-full flex-1 rounded-lg border border-[var(--app-border)] bg-white"
             />
           )}
         </div>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col gap-2">
           <div className="flex items-center justify-between gap-1.5">
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               {state.kind === 'csv' && (
                 <button
                   type="button"
                   onClick={() => setCsvMode(csvMode === 'table' ? 'raw' : 'table')}
-                  className="rounded-xl border border-[var(--app-border)] bg-[var(--app-subtle)] px-2.5 py-1 text-xs font-medium"
+                  className={TOOL_BUTTON}
                 >
                   {csvMode === 'table' ? t('viewer.raw') : t('viewer.table')}
                 </button>
@@ -501,7 +548,7 @@ export function FileViewer({
                 <button
                   type="button"
                   onClick={() => setPrettyJson(!prettyJson)}
-                  className="rounded-xl border border-[var(--app-border)] bg-[var(--app-subtle)] px-2.5 py-1 text-xs font-medium"
+                  className={TOOL_BUTTON}
                 >
                   {prettyJson ? t('viewer.min') : t('viewer.pretty')}
                 </button>
@@ -510,7 +557,7 @@ export function FileViewer({
                 <button
                   type="button"
                   onClick={() => setBinaryMode(binaryMode === 'text' ? 'hex' : 'text')}
-                  className="rounded-xl border border-[var(--app-border)] bg-[var(--app-subtle)] px-2.5 py-1 text-xs font-medium"
+                  className={TOOL_BUTTON}
                 >
                   {binaryMode === 'text' ? t('viewer.hex') : t('viewer.text')}
                 </button>
@@ -518,7 +565,7 @@ export function FileViewer({
               <button
                 type="button"
                 onClick={() => setWrapLines(!wrapLines)}
-                className="rounded-xl border border-[var(--app-border)] bg-[var(--app-subtle)] px-2.5 py-1 text-xs font-medium"
+                className={TOOL_BUTTON}
               >
                 {wrapLines ? t('viewer.unwrap') : t('viewer.wrap')}
               </button>
@@ -527,7 +574,7 @@ export function FileViewer({
                 onClick={() =>
                   setFontSize(fontSize === 'xs' ? 'sm' : fontSize === 'sm' ? 'base' : 'xs')
                 }
-                className="rounded-xl border border-[var(--app-border)] bg-[var(--app-subtle)] px-2.5 py-1 text-xs font-medium"
+                className={TOOL_BUTTON}
               >
                 Aa
               </button>
@@ -536,7 +583,11 @@ export function FileViewer({
             <button
               type="button"
               onClick={() => void handleCopy()}
-              className="rounded-xl bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-500"
+              className={`cursor-pointer rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
+                copied
+                  ? 'border-[var(--app-accent)] bg-[var(--app-accent-soft)] text-[var(--app-accent-text)]'
+                  : 'border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--app-text)] hover:bg-[var(--app-surface-2)]'
+              }`}
             >
               {copied ? t('viewer.copied') : t('viewer.copy')}
             </button>
@@ -547,13 +598,14 @@ export function FileViewer({
             placeholder={t('viewer.search')}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            className="w-full rounded-xl border border-[var(--app-border)] bg-[var(--app-subtle)] px-3 py-2 text-xs"
+            className={`${INPUT_CLASS} w-full text-xs`}
           />
 
           {state.kind === 'csv' && csvMode === 'table' ? (
             <div
               data-no-swipe="true"
-              className="max-h-[52dvh] flex-1 overflow-auto rounded-2xl border border-[var(--app-border)]"
+              data-scrollable="true"
+              className="max-h-[55dvh] flex-1 overflow-auto rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)]"
             >
               <table className="w-full border-collapse text-left text-xs select-text">
                 <tbody>
@@ -565,12 +617,15 @@ export function FileViewer({
                       key={rIdx}
                       className={
                         rIdx === 0
-                          ? 'bg-[var(--app-subtle)] font-semibold'
-                          : 'border-t border-[var(--app-border)]'
+                          ? 'sticky top-0 bg-[var(--app-surface-2)] font-semibold text-[var(--app-text)]'
+                          : 'border-t border-[var(--app-border)] hover:bg-[var(--app-surface-2)]/40'
                       }
                     >
                       {row.map((cell, cIdx) => (
-                        <td key={cIdx} className="px-2.5 py-1.5 whitespace-nowrap">
+                        <td
+                          key={cIdx}
+                          className="border-r border-[var(--app-border)]/50 px-2.5 py-1.5 whitespace-nowrap last:border-r-0"
+                        >
                           {cell}
                         </td>
                       ))}
@@ -582,7 +637,8 @@ export function FileViewer({
           ) : (
             <pre
               data-no-swipe="true"
-              className={`max-h-[52dvh] flex-1 overflow-auto rounded-2xl border border-[var(--app-border)] bg-[var(--app-subtle)] p-3 font-mono leading-relaxed select-text ${fontSizeClass} ${
+              data-scrollable="true"
+              className={`max-h-[55dvh] flex-1 overflow-auto rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] p-3 font-mono leading-relaxed text-[var(--app-text)] select-text ${fontSizeClass} ${
                 wrapLines ? 'break-words whitespace-pre-wrap' : 'whitespace-pre'
               }`}
             >
@@ -592,12 +648,17 @@ export function FileViewer({
             </pre>
           )}
 
-          <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+          <div className="flex items-center justify-between text-xs tabular-nums text-[var(--app-text-muted)]">
             <span>
-              {t('viewer.stats', {
-                lines: lineCount.toLocaleString(),
-                chars: displayedText.length.toLocaleString(),
-              })}
+              {search.trim()
+                ? t('viewer.matches', {
+                    shown: shownLines.toLocaleString(),
+                    total: totalLines.toLocaleString(),
+                  })
+                : t('viewer.stats', {
+                    lines: shownLines.toLocaleString(),
+                    chars: displayedText.length.toLocaleString(),
+                  })}
             </span>
             {state.truncated && (
               <span>{t('viewer.maxPreview', { size: formatBytes(MAX_TEXT_PREVIEW_BYTES) })}</span>

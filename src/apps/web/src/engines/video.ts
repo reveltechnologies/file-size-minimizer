@@ -52,7 +52,10 @@ export async function compressVideo(job: CompressJob): Promise<CompressResult> {
     const durationSec = info.durationSec ?? (await scanDuration(ffmpeg, input))
     if (!durationSec) throw new Error("Couldn't determine video duration.")
 
-    const audioKbps = options.muteAudio || !info.hasAudio ? 0 : DEFAULT_AUDIO_KBPS
+    const audioKbps =
+      options.muteAudio || options.videoAudioKbps === 0 || !info.hasAudio
+        ? 0
+        : (options.videoAudioKbps ?? DEFAULT_AUDIO_KBPS)
     let plan = calculateBitrate({ maxBytes, durationSec, audioKbps, sourceBytes: file.size })
     const tip = audioKbps > 0 ? 'Try Mute audio or a bigger target.' : 'Try a bigger target.'
     if (!plan.possible) {

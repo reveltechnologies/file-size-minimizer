@@ -10,22 +10,35 @@ import { createImageRenderer, decodeImage } from './canvas'
 import type { CompressJob, CompressResult } from './types'
 
 export async function photosToPdf(job: CompressJob): Promise<CompressResult> {
-  const { files, maxBytes, onStep, onProgress, onStatus, signal } = job
+  const { files, maxBytes, options, onStep, onProgress, onStatus, signal } = job
   const pages: ImageBitmap[] = []
+  const maxDim =
+    options.pdfMaxDimension === 0
+      ? Number.POSITIVE_INFINITY
+      : (options.pdfMaxDimension ?? PDF_IMAGE_STEPS[0].maxLongSide)
 
   try {
     for (const [i, file] of files.entries()) {
       signal.throwIfAborted()
       onStatus(`${i + 1} / ${files.length}`)
       onProgress(i / files.length)
-      pages.push(await downscale(await decodeImage(file, onStatus), PDF_IMAGE_STEPS[0].maxLongSide))
+      const decoded = await decodeImage(file, onStatus)
+      pages.push(Number.isFinite(maxDim) ? await downscale(decoded, maxDim) : decoded)
     }
 
     onStep('shrink')
+    const steps = PDF_IMAGE_STEPS.map((step) => ({
+      maxLongSide:
+        options.pdfMaxDimension === 0
+          ? Number.POSITIVE_INFINITY
+          : Math.min(step.maxLongSide, maxDim),
+      quality: options.pdfImageQuality != null ? Math.min(step.quality, options.pdfImageQuality) : step.quality,
+    }))
+
     let bytes: Uint8Array = new Uint8Array()
-    for (const [i, step] of PDF_IMAGE_STEPS.entries()) {
+    for (const [i, step] of steps.entries()) {
       onStatus('Building PDF…')
-      onProgress(i / PDF_IMAGE_STEPS.length)
+      onProgress(i / steps.length)
       bytes = await buildPdf(pages, step, signal)
       if (bytes.length <= maxBytes) break
     }
@@ -58,7 +71,9 @@ async function buildPdf(pages: ImageBitmap[], step: PdfImageStep, signal: AbortS
   const doc = await PDFDocument.create({ updateMetadata: false })
   for (const bitmap of pages) {
     signal.throwIfAborted()
-    const scale = Math.min(1, step.maxLongSide / Math.max(bitmap.width, bitmap.height))
+    const scale = Number.isFinite(step.maxLongSide)
+      ? Math.min(1, step.maxLongSide / Math.max(bitmap.width, bitmap.height))
+      : 1
     const jpeg = await (await createImageRenderer(bitmap)(scale, step.quality)).arrayBuffer()
     const image = await doc.embedJpg(jpeg)
     const { pageWidth, pageHeight, ...placement } = placeOnA4(bitmap.width, bitmap.height)

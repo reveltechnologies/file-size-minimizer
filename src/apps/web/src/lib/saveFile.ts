@@ -3,6 +3,8 @@ import { Directory, Filesystem } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
 import type { OutputLocationMode } from './settingsStore'
 
+export type SaveOutcome = 'saved' | 'cancelled'
+
 interface WritableWindow extends Window {
   showSaveFilePicker?: (options?: {
     suggestedName?: string
@@ -16,6 +18,17 @@ interface WritableWindow extends Window {
 const HANDLE_DB = 'fsm-handles-db'
 const HANDLE_STORE = 'handles'
 const FIXED_DIR_KEY = 'fixed-output-dir'
+
+export function canPickDirectory(): boolean {
+  if (typeof window === 'undefined' || Capacitor.isNativePlatform()) return false
+  return typeof (window as WritableWindow).showDirectoryPicker === 'function'
+}
+
+export function canAskSaveLocation(): boolean {
+  if (typeof window === 'undefined') return false
+  if (Capacitor.isNativePlatform()) return true
+  return typeof (window as WritableWindow).showSaveFilePicker === 'function'
+}
 
 function openHandleDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -120,7 +133,7 @@ export async function downloadBlob(
   blob: Blob,
   fileName: string,
   mode: OutputLocationMode = 'same',
-): Promise<void> {
+): Promise<SaveOutcome> {
   if (Capacitor.isNativePlatform()) {
     try {
       if (mode !== 'ask') {
@@ -131,14 +144,14 @@ export async function downloadBlob(
           directory: Directory.Documents,
           recursive: true,
         })
-        return
+        return 'saved'
       }
     } catch {
       // Fall back to system share/save dialog if Documents write is restricted.
     }
     const uri = await writeToNativeCache(blob, fileName)
     await Share.share({ title: fileName, url: uri })
-    return
+    return 'saved'
   }
 
   const win = window as WritableWindow
@@ -149,9 +162,9 @@ export async function downloadBlob(
       const writable = await fileHandle.createWritable()
       await writable.write(blob)
       await writable.close()
-      return
+      return 'saved'
     } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') return
+      if (err instanceof DOMException && err.name === 'AbortError') return 'cancelled'
     }
   }
 
@@ -167,14 +180,15 @@ export async function downloadBlob(
         const writable = await fileHandle.createWritable()
         await writable.write(blob)
         await writable.close()
-        return
+        return 'saved'
       }
     } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') return
+      if (err instanceof DOMException && err.name === 'AbortError') return 'cancelled'
     }
   }
 
   triggerBrowserDownload(blob, fileName)
+  return 'saved'
 }
 
 export function canShareFile(blob: Blob, fileName: string): boolean {

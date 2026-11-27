@@ -7,11 +7,18 @@ export interface HistoryEntry {
   mimeType: string
   size: number
   originalSize?: number
-   timestamp: number
+  timestamp: number
   blob: Blob
 }
 
-export const MAX_HISTORY_ITEMS = 10
+export const DEFAULT_HISTORY_LIMIT = 10
+export const MIN_HISTORY_LIMIT = 1
+export const MAX_HISTORY_LIMIT = 50
+
+export function clampHistoryLimit(limit: number): number {
+  if (!Number.isFinite(limit)) return DEFAULT_HISTORY_LIMIT
+  return Math.min(MAX_HISTORY_LIMIT, Math.max(MIN_HISTORY_LIMIT, Math.round(limit)))
+}
 
 const DB_NAME = 'file-size-minimizer-db'
 const DB_VERSION = 1
@@ -36,7 +43,11 @@ function openDb(): Promise<IDBDatabase> {
   })
 }
 
-export async function listHistory(bucket: HistoryBucket): Promise<HistoryEntry[]> {
+export async function listHistory(
+  bucket: HistoryBucket,
+  limit = DEFAULT_HISTORY_LIMIT,
+): Promise<HistoryEntry[]> {
+  const safeLimit = clampHistoryLimit(limit)
   try {
     const db = await openDb()
     return await new Promise<HistoryEntry[]>((resolve, reject) => {
@@ -47,7 +58,7 @@ export async function listHistory(bucket: HistoryBucket): Promise<HistoryEntry[]
       req.onsuccess = () => {
         const items = (req.result as HistoryEntry[]) ?? []
         items.sort((a, b) => b.timestamp - a.timestamp)
-        resolve(items.slice(0, MAX_HISTORY_ITEMS))
+        resolve(items.slice(0, safeLimit))
       }
       req.onerror = () => reject(req.error)
       tx.oncomplete = () => db.close()
@@ -59,10 +70,12 @@ export async function listHistory(bucket: HistoryBucket): Promise<HistoryEntry[]
 
 export async function addHistoryEntry(
   entry: Omit<HistoryEntry, 'id' | 'timestamp'>,
+  limit = DEFAULT_HISTORY_LIMIT,
 ): Promise<HistoryEntry[]> {
+  const safeLimit = clampHistoryLimit(limit)
   try {
     const db = await openDb()
-    const existing = await listHistory(entry.bucket)
+    const existing = await listHistory(entry.bucket, MAX_HISTORY_LIMIT)
     const duplicate = existing.find(
       (item) => item.fileName === entry.fileName && item.size === entry.size,
     )
@@ -75,8 +88,8 @@ export async function addHistoryEntry(
     }
 
     const updated = [newEntry, ...existing.filter((item) => item.id !== newEntry.id)]
-    const toKeep = updated.slice(0, MAX_HISTORY_ITEMS)
-    const toRemove = updated.slice(MAX_HISTORY_ITEMS)
+    const toKeep = updated.slice(0, safeLimit)
+    const toRemove = updated.slice(safeLimit)
 
     await new Promise<void>((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readwrite')
@@ -98,6 +111,37 @@ export async function addHistoryEntry(
     return toKeep
   } catch {
     return []
+  }
+}
+
+export async function trimHistory(limit: number): Promise<void> {
+  const safeLimit = clampHistoryLimit(limit)
+  try {
+    const [viewed, shrunk] = await Promise.all([
+      listHistory('viewed', MAX_HISTORY_LIMIT),
+      listHistory('shrunk', MAX_HISTORY_LIMIT),
+    ])
+    const toDelete = [...viewed.slice(safeLimit), ...shrunk.slice(safeLimit)]
+    if (toDelete.length === 0) return
+
+    const db = await openDb()
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite')
+      const store = tx.objectStore(STORE_NAME)
+      for (const item of toDelete) {
+        store.delete(item.id)
+      }
+      tx.oncomplete = () => {
+        db.close()
+        resolve()
+      }
+      tx.onerror = () => {
+        db.close()
+        reject(tx.error)
+      }
+    })
+  } catch {
+    // Ignore errors when IndexedDB is unavailable.
   }
 }
 
@@ -131,4 +175,3 @@ export async function clearHistory(bucket?: HistoryBucket): Promise<void> {
     // Ignore errors when IndexedDB is unavailable.
   }
 }
-

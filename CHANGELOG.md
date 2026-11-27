@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-11-27
+
+### Added
+- Support for shrinking text, markup, data, and source-code files (`.txt`, `.py`, `.json`, `.xml`, `.svg`, `.html`, `.css`, `.js`, `.ts`, `.csv`, `.md`, `.yaml`, `.sql`, and more) with either format-preserving minification or `.gz` compression (`100 KB`, `500 KB`, `1 MB`, or custom presets).
+- Live pre-shrink estimated output size and savings percentage before compressing, plus automatic detection and a disabled-button tooltip when a file cannot be shrunk further with current settings or at all.
+- Expanded **More options** controls across categories: `WebP` photo output, **Original (100%)** no-resize mode for photos, videos, and PDFs, quality presets, black-and-white photo toggle, video FPS and sound controls (`Normal`, `Low`, `Off`), and PDF image size/quality controls.
+- Editable recent-files history limit (`1–50`, default `10`) in Settings alongside `Keep recent files`.
+- Global drag-and-drop, clipboard image/file paste, photo thumbnails in Shrink and Recent files, and direct handoff between **View** and **Shrink**.
+- Startup update notification on Android powered by Google Play's In-App Updates API (`com.google.android.play:app-update`) with **Not now** and **Update** actions opening the Google Play listing.
+
+### Changed
+- Redesigned the interface into a cleaner, streamlined layout with a neutral **Dark** (`#18191c`) default theme (5 themes total), hairline dividers, and collapsed **More options** progressive disclosure.
+- Replaced instant tab transitions with a continuous 3-pane horizontal swipe pager featuring smooth ease-out settle and hold-to-stop velocity decay.
+- Made Save Location options platform-accurate (hiding unsupported directory pickers and save prompts where browsers/Android WebView do not support them).
+- Updated [Privacy Policy](PRIVACY_POLICY.md), [Terms of Use](TERMS_OF_USE.md), [Security Policy](SECURITY.md), and documentation for `1.1.0`.
+- Bumped release version to `1.1.0` (`versionCode 5`).
+
+### Fixed
+- Implemented RFC-4180 CSV parsing for quoted fields, commas, and newlines in the built-in viewer's table view.
+- Prevented unprobable video containers (such as `.mkv`) from remaining stuck on `Checking size…`.
+- Localized progress status messages in English (`en_us`) and Turkish (`tr_tr`).
+- Synced the Settings footer version string directly with `package.json`.
+
 ## [1.0.3] - 2026-11-10
 
 ### Fixed

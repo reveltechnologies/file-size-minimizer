@@ -8,9 +8,9 @@ export function ProgressBar({ ratio, label }: ProgressBarProps) {
 
   return (
     <div>
-      <div className="mb-2 flex justify-between gap-3 text-sm">
-        <span className="truncate text-slate-600 dark:text-slate-300">{label}</span>
-        <span className="tabular-nums">{percent}%</span>
+      <div className="mb-2 flex items-baseline justify-between gap-3">
+        <span className="truncate text-sm text-[var(--app-text-muted)]">{label}</span>
+        <span className="text-sm font-medium tabular-nums text-[var(--app-text)]">{percent}%</span>
       </div>
       <div
         role="progressbar"
@@ -18,10 +18,10 @@ export function ProgressBar({ ratio, label }: ProgressBarProps) {
         aria-valuenow={percent}
         aria-valuemin={0}
         aria-valuemax={100}
-        className="h-2.5 overflow-hidden rounded-full bg-[var(--app-subtle)]"
+        className="h-1.5 overflow-hidden rounded-full bg-[var(--app-surface-2)]"
       >
         <div
-          className="h-full rounded-full bg-emerald-500 transition-[width] duration-300"
+          className="h-full rounded-full bg-[var(--app-accent)] transition-[width] duration-300"
           style={{ width: `${ratio * 100}%` }}
         />
       </div>

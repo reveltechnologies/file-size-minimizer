@@ -10,6 +10,10 @@ describe('pickFiles', () => {
       ['IMG_1234.MOV', 'video'],
       ['logo.png', 'image'],
       ['visa.pdf', 'pdf'],
+      ['notes.txt', 'text'],
+      ['script.py', 'text'],
+      ['feed.xml', 'text'],
+      ['config.json', 'text'],
     ]) {
       const picked = file(name)
       expect(pickFiles([picked])).toEqual({ files: [picked], category })
@@ -22,7 +26,7 @@ describe('pickFiles', () => {
   })
 
   it('rejects an unsupported file', () => {
-    expect(pickFiles([file('notes.docx')])).toBe(`"notes.docx" isn't supported. Try a video, photo or PDF.`)
+    expect(pickFiles([file('notes.docx')])).toBe(`"notes.docx" isn't supported.`)
   })
 
   it('combines several photos into one PDF, in natural name order', () => {

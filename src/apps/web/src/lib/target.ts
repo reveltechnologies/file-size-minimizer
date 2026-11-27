@@ -37,7 +37,7 @@ export function defaultTarget(category: FileCategory, sourceBytes?: number): Tar
   return {
     choice: presets[0].id,
     customValue: '',
-    customUnit: category === 'image' ? 'KB' : 'MB',
+    customUnit: category === 'image' || category === 'text' ? 'KB' : 'MB',
   }
 }
 

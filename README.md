@@ -1,6 +1,6 @@
 # File Size Minimizer
 
-Shrink videos, photos, and PDFs to fit upload limits, strip metadata, and view local files on your device. Everything runs locally: **your files never leave your device.**
+Shrink videos, photos, PDFs, and text/code files to fit upload limits, strip hidden metadata, and view local files on your device. Everything runs locally: **your files never leave your device.**
 
 Made by [Revel Technologies](https://github.com/reveltechnologies).
 
@@ -8,18 +8,20 @@ Made by [Revel Technologies](https://github.com/reveltechnologies).
 
 ## Features
 
-- **Shrink** videos, photos, and PDFs under presets (`Discord`, `WhatsApp`, `Gmail`, `Portal ID`, `Visa Portal`) or a custom KB/MB target.
+- **Shrink** videos, photos, PDFs, and text/code files under presets (`Discord`, `WhatsApp`, `Email`, `ID Photo`, `Form`, `Portal`, `Document`, `100 KB`–`1 MB`) or a custom KB/MB limit, with live pre-shrink size estimates.
+- **Granular options** under **More options**: keep original 100% dimensions or resize, adjust quality, choose `JPG`, `WebP`, or `PNG` photo output, convert photos to black & white, tune video FPS/sound (`Normal`, `Low`, `Off`), or minify/gzip text and code files.
 - **Combine photos** into a single A4 PDF sized under your chosen limit.
-- **View** local files directly on your phone (`.txt`, `.json`, `.csv`, `.log`, code files, HEIC, PDF, audio/video, and binary hex/text).
-- **Strip metadata** (EXIF, GPS, camera serials, author tags, and PDF revision history).
-- **100% Offline & Local**: All engines (including `ffmpeg.wasm`, `pdf-lib`, and `heic-to`) are bundled locally with zero external network requests.
-- **Settings**: 5 themes (Dark Green default), English (`en_us`) and Turkish (`tr_tr`) with automatic device language detection, output folder & file naming, and optional local history for the last 10 viewed and 10 shrunk files.
+- **View** local files directly on your device (`.txt`, `.json`, `.csv` table view, `.log`, code files, HEIC, PDF, audio/video, and binary hex/text) and send them straight between **View** and **Shrink**.
+- **Remove hidden info** (EXIF, GPS, camera serials, author tags, and PDF revision history) locally.
+- **Offline Architecture**: All compression and viewer engines (`ffmpeg.wasm`, `pdf-lib`, `heic-to`) are bundled locally, and the Android build explicitly removes the `INTERNET` permission. On Google Play installs, `PlayUpdatePlugin` uses Google Play's local In-App Updates API to notify you when an update is available.
+- **Settings**: 5 themes (**Dark** default, **Dark Green**, **OLED Black**, **Sage Light**, **Light**), English (`en_us`) and Turkish (`tr_tr`) with automatic language detection, save location & custom prefix/suffix, and configurable local recent-file history (`1–50`, default `10`).
 
 | File type | Accepted formats | Output | Presets |
 |---|---|---|---|
-| Video | MP4, MOV, WebM, MKV, GIF | MP4 | Discord Free 10 MB · WhatsApp 16 MB · Email / Gmail 25 MB |
-| Photo | JPG, PNG, WebP, HEIC / HEIF | JPG or PNG | Strict Portal ID 500 KB · Standard Form 1 MB |
-| PDF | PDF | PDF | Visa / Uni Portal 2 MB · Standard Doc 5 MB · Email Packet 10 MB |
+| Video | MP4, MOV, WebM, MKV, GIF | MP4 | Discord 10 MB · WhatsApp 16 MB · Email 25 MB |
+| Photo | JPG, PNG, WebP, HEIC / HEIF | JPG, WebP, or PNG | ID Photo 500 KB · Form 1 MB |
+| PDF | PDF | PDF | Portal 2 MB · Document 5 MB · Email 10 MB |
+| Text | TXT, PY, JSON, XML, SVG, HTML, CSS, JS/TS, CSV, MD, YAML, SQL, etc. | Keep format (minified) or `.gz` | 100 KB · 500 KB · 1 MB |
 
 ---
 
@@ -72,12 +74,12 @@ The release Android App Bundle is generated at `src/apps/web/android/app/build/o
 ```
 src/
   apps/web/          React + Vite + Tailwind + Capacitor mobile app
-    android/         Android Gradle project for Google Play (.aab)
-    src/components/  UI scenes and components
-    src/engines/     Local video, image, and PDF compression engines
-    src/lib/         State, i18n, storage, and native file/share helpers
+    android/         Android Gradle project for Google Play (.aab) + PlayUpdatePlugin.java
+    src/components/  UI scenes, update prompt, and controls
+    src/engines/     Local video, image, PDF, and text compression engines
+    src/lib/         State, i18n, storage, estimation, Play update bridge, save/share
     src/locales/     Language files (en_us.json, tr_tr.json)
-  packages/core/     Shared TypeScript core (presets, bitrate math, metadata, layout)
+  packages/core/     Shared TypeScript core (presets, bitrate math, metadata, layout, text shrink)
 ```
 
 ---

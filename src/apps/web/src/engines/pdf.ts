@@ -28,6 +28,28 @@ interface PdfImage {
   original: PDFRawStream
 }
 
+export interface PdfInspection {
+  pageCount: number
+  imageCount: number
+  imageBytes: number
+  nonImageBytes: number
+  totalBytes: number
+}
+
+export async function inspectPdf(file: File): Promise<PdfInspection> {
+  const bytes = new Uint8Array(await file.arrayBuffer())
+  const doc = await PDFDocument.load(bytes, { updateMetadata: false, ignoreEncryption: true })
+  const images = findRecompressibleImages(doc)
+  const imageBytes = images.reduce((sum, img) => sum + img.original.contents.length, 0)
+  return {
+    pageCount: doc.getPageCount(),
+    imageCount: images.length,
+    imageBytes,
+    nonImageBytes: Math.max(0, bytes.length - imageBytes),
+    totalBytes: bytes.length,
+  }
+}
+
 export async function compressPdf(job: CompressJob): Promise<CompressResult> {
   const { files: [file], maxBytes, options, onStep, onProgress, onStatus, signal } = job
   const fileName = outputFileName(file.name, 'pdf')
@@ -36,9 +58,14 @@ export async function compressPdf(job: CompressJob): Promise<CompressResult> {
     fileName,
   })
 
+  const hasExplicitImageSettings =
+    options.pdfMaxDimension != null || options.pdfImageQuality != null
+
   onStatus('Reading PDF…')
   const original = new Uint8Array(await file.arrayBuffer())
-  if (original.length <= maxBytes && !options.stripHiddenData) return toResult(original)
+  if (original.length <= maxBytes && !options.stripHiddenData && !hasExplicitImageSettings) {
+    return toResult(original)
+  }
 
   let doc: PDFDocument
   try {
@@ -53,20 +80,46 @@ export async function compressPdf(job: CompressJob): Promise<CompressResult> {
   removeUnreachableObjects(doc)
   let bytes = await doc.save({ useObjectStreams: true })
 
-  const images = bytes.length > maxBytes ? findRecompressibleImages(doc) : []
-  const totalSteps = images.length > 0 ? PDF_IMAGE_STEPS.length : 0
-  for (const [i, step] of PDF_IMAGE_STEPS.entries()) {
-    if (bytes.length <= maxBytes || images.length === 0) break
-    signal.throwIfAborted()
-    onStatus('Compressing pages…')
-    onProgress(i / totalSteps)
-    await recompressImages(doc, images, step, signal)
-    bytes = await doc.save({ useObjectStreams: true })
+  const needsImagePass = bytes.length > maxBytes || hasExplicitImageSettings
+  const images = needsImagePass ? findRecompressibleImages(doc) : []
+
+  if (images.length > 0) {
+    const steps = buildPdfSteps(options.pdfMaxDimension, options.pdfImageQuality)
+    const totalSteps = steps.length
+    for (const [i, step] of steps.entries()) {
+      if (i > 0 && bytes.length <= maxBytes) break
+      if (!hasExplicitImageSettings && bytes.length <= maxBytes) break
+      signal.throwIfAborted()
+      onStatus('Compressing pages…')
+      onProgress(i / totalSteps)
+      await recompressImages(doc, images, step, signal)
+      bytes = await doc.save({ useObjectStreams: true })
+    }
   }
   onProgress(1)
 
   if (!options.stripHiddenData && bytes.length >= original.length) return toResult(original)
   return toResult(bytes)
+}
+
+function buildPdfSteps(
+  maxDim?: number | null,
+  qualityCap?: number | null,
+): PdfImageStep[] {
+  const dim = maxDim === 0 || maxDim == null ? Number.POSITIVE_INFINITY : maxDim
+  const qual = qualityCap ?? 1
+  const adjusted = PDF_IMAGE_STEPS.map((s) => ({
+    maxLongSide: maxDim === 0 ? Number.POSITIVE_INFINITY : Math.min(s.maxLongSide, dim),
+    quality: Math.min(s.quality, qual),
+  }))
+  const deduped: PdfImageStep[] = []
+  for (const step of adjusted) {
+    const prev = deduped[deduped.length - 1]
+    if (!prev || prev.maxLongSide !== step.maxLongSide || prev.quality !== step.quality) {
+      deduped.push(step)
+    }
+  }
+  return deduped
 }
 
 function stripMetadata(doc: PDFDocument): void {
@@ -151,7 +204,9 @@ async function recompressImages(
     if (!bitmap) continue
     try {
       const scale = Math.min(1, step.maxLongSide / Math.max(bitmap.width, bitmap.height))
-      const jpeg = new Uint8Array(await (await createImageRenderer(bitmap)(scale, step.quality)).arrayBuffer())
+      const jpeg = new Uint8Array(
+        await (await createImageRenderer(bitmap)(scale, step.quality)).arrayBuffer(),
+      )
       if (jpeg.length >= image.original.contents.length) {
         doc.context.assign(image.ref, image.original)
         continue

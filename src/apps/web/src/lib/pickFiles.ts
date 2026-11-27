@@ -11,7 +11,7 @@ export function pickFiles(files: File[]): PickedFiles | string {
 
   if (files.length === 1) {
     const category = detectCategory(files[0].name, files[0].type)
-    return category ? { files, category } : `"${files[0].name}" isn't supported. Try a video, photo or PDF.`
+    return category ? { files, category } : `"${files[0].name}" isn't supported.`
   }
 
   if (files.length > MAX_MERGE_PHOTOS) return `Pick up to ${MAX_MERGE_PHOTOS} photos at a time.`

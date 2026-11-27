@@ -1,7 +1,7 @@
 import { formatBytes, presetsFor, type FileCategory, type PresetId } from '@revel/core'
 import { useI18n, type TranslationKey } from '../lib/i18n'
 import type { SizeUnit, Target } from '../lib/target'
-import { choiceClass } from './styles'
+import { INPUT_CLASS, SECTION_HEAD, SELECT_CLASS } from './styles'
 
 const PRESET_KEY: Record<PresetId, TranslationKey> = {
   discord: 'preset.discord',
@@ -12,6 +12,9 @@ const PRESET_KEY: Record<PresetId, TranslationKey> = {
   'visa-portal': 'preset.visa_portal',
   'standard-doc': 'preset.standard_doc',
   'email-packet': 'preset.email_packet',
+  'text-small': 'preset.text_small',
+  'text-medium': 'preset.text_medium',
+  'text-large': 'preset.text_large',
 }
 
 interface TargetPickerProps {
@@ -24,14 +27,13 @@ interface TargetPickerProps {
 export function TargetPicker({ category, target, sourceBytes, onChange }: TargetPickerProps) {
   const { t } = useI18n()
   const isCustom = target.choice === 'custom'
+  const presets = presetsFor(category)
 
   return (
     <fieldset>
-      <legend className="mb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
-        {t('shrink.fitUnder')}
-      </legend>
+      <legend className={`mb-2 ${SECTION_HEAD}`}>{t('shrink.fitUnder')}</legend>
       <div className="grid grid-cols-2 gap-2">
-        {presetsFor(category).map((preset) => {
+        {presets.map((preset) => {
           const active = target.choice === preset.id
           const alreadyFits = Boolean(sourceBytes && sourceBytes > 0 && preset.maxBytes >= sourceBytes)
           return (
@@ -40,35 +42,58 @@ export function TargetPicker({ category, target, sourceBytes, onChange }: Target
               type="button"
               aria-pressed={active}
               onClick={() => onChange({ ...target, choice: preset.id })}
-              className={choiceClass(active)}
+              className={`flex cursor-pointer flex-col justify-between gap-0.5 rounded-lg border px-3 py-2.5 text-left transition-colors ${
+                active
+                  ? 'border-[var(--app-accent)] bg-[var(--app-accent-soft)] text-[var(--app-text)]'
+                  : 'border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--app-text)] hover:border-[var(--app-border-strong)]'
+              }`}
             >
-              <div className="flex items-center justify-between gap-1">
-                <span className="block truncate font-semibold">
-                  {t(PRESET_KEY[preset.id as PresetId])}
+              <span className="truncate text-sm font-medium">
+                {t(PRESET_KEY[preset.id as PresetId])}
+              </span>
+              <span className="flex items-center justify-between gap-1.5 text-xs tabular-nums">
+                <span
+                  className={
+                    active ? 'font-medium text-[var(--app-accent-text)]' : 'text-[var(--app-text-muted)]'
+                  }
+                >
+                  &lt; {formatBytes(preset.maxBytes)}
                 </span>
                 {alreadyFits && (
-                  <span className="rounded-md bg-emerald-500/15 px-1 py-0.5 text-[9px] font-semibold text-emerald-500 shrink-0">
+                  <span className="text-[11px] text-[var(--app-text-muted)]">
                     {t('shrink.alreadyFits')}
                   </span>
                 )}
-              </div>
-              <span className="block text-xs opacity-80">&lt; {formatBytes(preset.maxBytes)}</span>
+              </span>
             </button>
           )
         })}
+
         <button
           type="button"
           aria-pressed={isCustom}
           onClick={() => onChange({ ...target, choice: 'custom' })}
-          className={choiceClass(isCustom)}
+          className={`flex cursor-pointer items-center justify-between rounded-lg border px-3 py-2.5 text-left transition-colors ${
+            presets.length % 2 === 0 ? 'col-span-2' : ''
+          } ${
+            isCustom
+              ? 'border-[var(--app-accent)] bg-[var(--app-accent-soft)] text-[var(--app-text)]'
+              : 'border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--app-text)] hover:border-[var(--app-border-strong)]'
+          }`}
         >
-          <span className="block font-semibold">{t('shrink.custom')}</span>
-          <span className="block text-xs opacity-80">{t('shrink.yourLimit')}</span>
+          <span className="text-sm font-medium">{t('shrink.custom')}</span>
+          <span
+            className={`text-xs ${
+              isCustom ? 'font-medium text-[var(--app-accent-text)]' : 'text-[var(--app-text-muted)]'
+            }`}
+          >
+            MB / KB
+          </span>
         </button>
       </div>
 
       {isCustom && (
-        <div className="mt-2.5 flex gap-2">
+        <div className="mt-2 flex gap-2">
           <input
             type="number"
             inputMode="decimal"
@@ -79,13 +104,13 @@ export function TargetPicker({ category, target, sourceBytes, onChange }: Target
             autoFocus
             value={target.customValue}
             onChange={(event) => onChange({ ...target, customValue: event.target.value })}
-            className="min-w-0 flex-1 rounded-2xl border border-[var(--app-border)] bg-[var(--app-subtle)] px-3.5 py-2.5 text-base"
+            className={`${INPUT_CLASS} h-10 min-w-0 flex-1 tabular-nums`}
           />
           <select
             aria-label="Unit"
             value={target.customUnit}
             onChange={(event) => onChange({ ...target, customUnit: event.target.value as SizeUnit })}
-            className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-subtle)] px-3.5 py-2.5 text-base font-medium"
+            className={`${SELECT_CLASS} h-10`}
           >
             <option value="MB">MB</option>
             <option value="KB">KB</option>

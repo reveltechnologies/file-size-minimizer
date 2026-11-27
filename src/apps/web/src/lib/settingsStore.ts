@@ -1,4 +1,5 @@
 import { DEFAULT_OPTIONS, type CompressOptions, type ImageFormat } from '@revel/core'
+import { clampHistoryLimit, DEFAULT_HISTORY_LIMIT } from './historyStore'
 import { AVAILABLE_LOCALES, detectDeviceLanguage, type TranslationKey } from './i18n'
 
 export type ThemeId = 'dark-green' | 'dark-slate' | 'oled' | 'light-green' | 'light'
@@ -11,6 +12,7 @@ export interface AppSettings {
   options: CompressOptions
   defaultPhotoFormat: DefaultPhotoFormat
   rememberHistory: boolean
+  historyLimit: number
   outputLocationMode: OutputLocationMode
   fixedFolderName: string
   filePrefix: string
@@ -22,10 +24,11 @@ const STORAGE_KEY = 'fsm.settings.v1'
 export function createDefaultSettings(): AppSettings {
   return {
     language: detectDeviceLanguage(),
-    theme: 'dark-green',
+    theme: 'dark-slate',
     options: { ...DEFAULT_OPTIONS },
     defaultPhotoFormat: 'auto',
     rememberHistory: true,
+    historyLimit: DEFAULT_HISTORY_LIMIT,
     outputLocationMode: 'same',
     fixedFolderName: 'Downloads',
     filePrefix: '',
@@ -38,12 +41,43 @@ export const THEMES: {
   labelKey: TranslationKey
   isDark: boolean
   swatch: string
+  shellColor: string
 }[] = [
-  { id: 'dark-green', labelKey: 'settings.theme.dark-green', isDark: true, swatch: '#064e3b' },
-  { id: 'oled', labelKey: 'settings.theme.oled', isDark: true, swatch: '#000000' },
-  { id: 'dark-slate', labelKey: 'settings.theme.dark-slate', isDark: true, swatch: '#0f172a' },
-  { id: 'light-green', labelKey: 'settings.theme.light-green', isDark: false, swatch: '#d1fae5' },
-  { id: 'light', labelKey: 'settings.theme.light', isDark: false, swatch: '#f8fafc' },
+  {
+    id: 'dark-slate',
+    labelKey: 'settings.theme.dark-slate',
+    isDark: true,
+    swatch: '#222428',
+    shellColor: '#18191c',
+  },
+  {
+    id: 'dark-green',
+    labelKey: 'settings.theme.dark-green',
+    isDark: true,
+    swatch: '#1a231f',
+    shellColor: '#121916',
+  },
+  {
+    id: 'oled',
+    labelKey: 'settings.theme.oled',
+    isDark: true,
+    swatch: '#000000',
+    shellColor: '#000000',
+  },
+  {
+    id: 'light',
+    labelKey: 'settings.theme.light',
+    isDark: false,
+    swatch: '#ffffff',
+    shellColor: '#ffffff',
+  },
+  {
+    id: 'light-green',
+    labelKey: 'settings.theme.light-green',
+    isDark: false,
+    swatch: '#e8efe9',
+    shellColor: '#f7faf8',
+  },
 ]
 
 export function applyNaming(
@@ -52,12 +86,18 @@ export function applyNaming(
   prefix: string,
   suffix: string,
 ): string {
-  const outDot = engineOutputName.lastIndexOf('.')
-  const ext = outDot > 0 ? engineOutputName.slice(outDot + 1) : 'bin'
-  const inDot = inputFileName.lastIndexOf('.')
-  const base = inDot > 0 ? inputFileName.slice(0, inDot) : inputFileName || 'file'
   const cleanPrefix = prefix.replace(/[\\/:*?"<>|]/g, '')
   const cleanSuffix = suffix.replace(/[\\/:*?"<>|]/g, '')
+  const inDot = inputFileName.lastIndexOf('.')
+  const base = inDot > 0 ? inputFileName.slice(0, inDot) : inputFileName || 'file'
+
+  if (engineOutputName.toLowerCase().endsWith('.gz')) {
+    const inExt = inDot > 0 ? inputFileName.slice(inDot + 1) : ''
+    return `${cleanPrefix}${base}${cleanSuffix}${inExt ? `.${inExt}` : ''}.gz`
+  }
+
+  const outDot = engineOutputName.lastIndexOf('.')
+  const ext = outDot > 0 ? engineOutputName.slice(outDot + 1) : 'bin'
   return `${cleanPrefix}${base}${cleanSuffix}.${ext}`
 }
 
@@ -77,6 +117,7 @@ export function loadSettings(): AppSettings {
       : defaults.theme
     const validPhotoFormat: DefaultPhotoFormat =
       parsed.defaultPhotoFormat === 'jpeg' ||
+      parsed.defaultPhotoFormat === 'webp' ||
       parsed.defaultPhotoFormat === 'png' ||
       parsed.defaultPhotoFormat === 'auto'
         ? parsed.defaultPhotoFormat
@@ -87,6 +128,27 @@ export function loadSettings(): AppSettings {
       parsed.outputLocationMode === 'same'
         ? parsed.outputLocationMode
         : defaults.outputLocationMode
+    const videoMaxHeight =
+      parsed.options?.videoMaxHeight === 0 ||
+      parsed.options?.videoMaxHeight === 1080 ||
+      parsed.options?.videoMaxHeight === 720 ||
+      parsed.options?.videoMaxHeight === 480 ||
+      parsed.options?.videoMaxHeight === 360 ||
+      parsed.options?.videoMaxHeight === 240
+        ? parsed.options.videoMaxHeight
+        : null
+    const videoAudioKbps =
+      parsed.options?.videoAudioKbps === 128 ||
+      parsed.options?.videoAudioKbps === 64 ||
+      parsed.options?.videoAudioKbps === 0
+        ? parsed.options.videoAudioKbps
+        : undefined
+    const muteAudio =
+      videoAudioKbps === 0
+        ? true
+        : typeof parsed.options?.muteAudio === 'boolean'
+          ? parsed.options.muteAudio
+          : DEFAULT_OPTIONS.muteAudio
 
     return {
       language: validLanguage,
@@ -100,16 +162,19 @@ export function loadSettings(): AppSettings {
           typeof parsed.options?.smartOptimize === 'boolean'
             ? parsed.options.smartOptimize
             : DEFAULT_OPTIONS.smartOptimize,
-        muteAudio:
-          typeof parsed.options?.muteAudio === 'boolean'
-            ? parsed.options.muteAudio
-            : DEFAULT_OPTIONS.muteAudio,
+        muteAudio,
+        videoMaxHeight,
+        ...(videoAudioKbps !== undefined ? { videoAudioKbps } : {}),
       },
       defaultPhotoFormat: validPhotoFormat,
       rememberHistory:
         typeof parsed.rememberHistory === 'boolean'
           ? parsed.rememberHistory
           : defaults.rememberHistory,
+      historyLimit:
+        typeof parsed.historyLimit === 'number'
+          ? clampHistoryLimit(parsed.historyLimit)
+          : defaults.historyLimit,
       outputLocationMode: validLocationMode,
       fixedFolderName:
         typeof parsed.fixedFolderName === 'string' && parsed.fixedFolderName.trim()

@@ -11,9 +11,10 @@
 
 File Size Minimizer processes all files locally on the user's device:
 
-- **No File Uploads:** Videos, photos, PDFs, and viewed files are processed in local memory on the device. No file contents or metadata are sent to external servers.
-- **Local Storage:** Settings (`localStorage`) and recent file history (`IndexedDB`) stay on the device and can be disabled or cleared in **Settings**.
-- **Metadata Removal:** When **Remove metadata** is enabled, EXIF tags, GPS coordinates, camera serial numbers, and PDF edit history are stripped locally before saving.
+- **No File Uploads:** Videos, photos, PDFs, text/code files, and viewed files are processed in local memory on the device. No file contents or metadata are sent to external servers, and the Android manifest removes the `INTERNET` permission (`tools:node="remove"`).
+- **Local Storage:** Settings (`localStorage`), session prompt state (`sessionStorage`), and configurable recent file history (`1–50` entries in `IndexedDB`) stay on the device and can be disabled or cleared in **Settings**.
+- **Metadata Removal:** When **Remove hidden info** is enabled, EXIF tags, GPS coordinates, camera serial numbers, and PDF edit history are stripped locally before saving.
+- **Play Update Check:** On Android, `PlayUpdatePlugin` uses Google Play's In-App Updates API over local binder IPC with the Google Play Store app.
 
 ## Reporting a Vulnerability
 

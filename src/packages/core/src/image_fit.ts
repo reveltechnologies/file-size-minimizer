@@ -21,47 +21,66 @@ export type FittedImage<T> = Encoded<T> & ImageEncodeAttempt
 export interface ScaleRange {
   initialScale: number
   minScale: number
+  minQuality?: number
+  maxQuality?: number
 }
 
-export function imageScaleRange(width: number, height: number): ScaleRange {
+export function imageScaleRange(
+  width: number,
+  height: number,
+  maxLongSide = MAX_IMAGE_LONG_SIDE,
+  minLongSide = MIN_IMAGE_LONG_SIDE,
+): ScaleRange {
   const longSide = Math.max(width, height)
   return {
-    initialScale: Math.min(1, MAX_IMAGE_LONG_SIDE / longSide),
-    minScale: Math.min(1, MIN_IMAGE_LONG_SIDE / longSide),
+    initialScale: Math.min(1, maxLongSide / longSide),
+    minScale: Math.min(1, minLongSide / longSide),
   }
 }
 
 export async function fitImageToSize<T>(
   encode: (attempt: ImageEncodeAttempt) => Promise<Encoded<T>>,
   maxBytes: number,
-  { initialScale, minScale }: ScaleRange = { initialScale: 1, minScale: 0 },
+  {
+    initialScale,
+    minScale,
+    minQuality = MIN_JPEG_QUALITY,
+    maxQuality = MAX_JPEG_QUALITY,
+  }: ScaleRange = { initialScale: 1, minScale: 0 },
 ): Promise<FittedImage<T> | null> {
   let scale = initialScale
+  const lowInit = Math.min(minQuality, maxQuality)
+  const highInit = Math.max(minQuality, maxQuality)
 
   for (let round = 0; round < MAX_SCALE_ROUNDS; round++) {
-    const best = await encode({ scale, quality: MAX_JPEG_QUALITY })
-    if (best.bytes <= maxBytes) return { ...best, scale, quality: MAX_JPEG_QUALITY }
+    const best = await encode({ scale, quality: highInit })
+    if (best.bytes <= maxBytes) return { ...best, scale, quality: highInit }
 
-    const worst = await encode({ scale, quality: MIN_JPEG_QUALITY })
-    if (worst.bytes <= maxBytes) {
-      let fitted: FittedImage<T> = { ...worst, scale, quality: MIN_JPEG_QUALITY }
-      let low = MIN_JPEG_QUALITY
-      let high = MAX_JPEG_QUALITY
-      for (let i = 0; i < QUALITY_SEARCH_STEPS; i++) {
-        const quality = (low + high) / 2
-        const attempt = await encode({ scale, quality })
-        if (attempt.bytes <= maxBytes) {
-          fitted = { ...attempt, scale, quality }
-          low = quality
-        } else {
-          high = quality
+    if (highInit > lowInit) {
+      const worst = await encode({ scale, quality: lowInit })
+      if (worst.bytes <= maxBytes) {
+        let fitted: FittedImage<T> = { ...worst, scale, quality: lowInit }
+        let low = lowInit
+        let high = highInit
+        for (let i = 0; i < QUALITY_SEARCH_STEPS; i++) {
+          const quality = (low + high) / 2
+          const attempt = await encode({ scale, quality })
+          if (attempt.bytes <= maxBytes) {
+            fitted = { ...attempt, scale, quality }
+            low = quality
+          } else {
+            high = quality
+          }
         }
+        return fitted
       }
-      return fitted
-    }
 
-    if (scale <= minScale) return null
-    scale = nextScale(scale, minScale, maxBytes, worst.bytes)
+      if (scale <= minScale) return null
+      scale = nextScale(scale, minScale, maxBytes, worst.bytes)
+    } else {
+      if (scale <= minScale) return null
+      scale = nextScale(scale, minScale, maxBytes, best.bytes)
+    }
   }
   return null
 }
@@ -98,4 +117,5 @@ export const PDF_IMAGE_STEPS: readonly PdfImageStep[] = [
   { maxLongSide: 1240, quality: 0.5 },
   { maxLongSide: 1000, quality: 0.45 },
   { maxLongSide: 850, quality: 0.4 },
+  { maxLongSide: 650, quality: 0.3 },
 ]

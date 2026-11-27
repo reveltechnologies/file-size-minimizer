@@ -2,7 +2,10 @@ import { outputMimeType, type ImageFormat } from '@revel/core'
 
 export type ImageRenderer = (scale: number, quality?: number) => Promise<Blob>
 
-export async function decodeImage(file: File, onStatus: (message: string) => void): Promise<ImageBitmap> {
+export async function decodeImage(
+  file: File,
+  onStatus: (message: string) => void,
+): Promise<ImageBitmap> {
   try {
     return await createImageBitmap(file)
   } catch {
@@ -16,7 +19,11 @@ export async function decodeImage(file: File, onStatus: (message: string) => voi
   }
 }
 
-export function createImageRenderer(bitmap: ImageBitmap, format: ImageFormat = 'jpeg'): ImageRenderer {
+export function createImageRenderer(
+  bitmap: ImageBitmap,
+  format: ImageFormat = 'jpeg',
+  grayscale = false,
+): ImageRenderer {
   const canvas = document.createElement('canvas')
   let drawnScale = -1
 
@@ -32,6 +39,17 @@ export function createImageRenderer(bitmap: ImageBitmap, format: ImageFormat = '
       }
       context.imageSmoothingQuality = 'high'
       context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+      if (grayscale) {
+        const imgData = context.getImageData(0, 0, canvas.width, canvas.height)
+        const d = imgData.data
+        for (let i = 0; i < d.length; i += 4) {
+          const lum = Math.round(0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2])
+          d[i] = lum
+          d[i + 1] = lum
+          d[i + 2] = lum
+        }
+        context.putImageData(imgData, 0, 0)
+      }
       drawnScale = scale
     }
 

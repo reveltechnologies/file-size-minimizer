@@ -3,7 +3,7 @@ import type { HistoryEntry } from '../lib/historyStore'
 import { useI18n } from '../lib/i18n'
 import { downloadBlob } from '../lib/saveFile'
 import type { OutputLocationMode } from '../lib/settingsStore'
-import { CARD, SUBTLE_BOX } from './styles'
+import { DIVIDER_LIST, ICON_BUTTON, SECTION_HEAD } from './styles'
 
 interface RecentFilesCardProps {
   title: string
@@ -11,6 +11,7 @@ interface RecentFilesCardProps {
   outputLocationMode: OutputLocationMode
   onOpen?: (entry: HistoryEntry) => void
   onClear: () => void
+  onNotify?: (message: string) => void
 }
 
 export function RecentFilesCard({
@@ -19,39 +20,35 @@ export function RecentFilesCard({
   outputLocationMode,
   onOpen,
   onClear,
+  onNotify,
 }: RecentFilesCardProps) {
   const { t } = useI18n()
   if (entries.length === 0) return null
 
+  async function handleDownload(entry: HistoryEntry) {
+    const outcome = await downloadBlob(entry.blob, entry.fileName, outputLocationMode)
+    if (outcome === 'saved') onNotify?.(t('common.saved'))
+  }
+
   return (
-    <section className={`${CARD} flex flex-col gap-2.5`}>
+    <section className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
-          {title} ({entries.length}/10)
-        </h2>
+        <h2 className={SECTION_HEAD}>{title}</h2>
         <button
           type="button"
           onClick={onClear}
           aria-label={t('common.clear')}
           title={t('common.clear')}
-          className="rounded-lg p-1 text-slate-500 active:opacity-70 dark:text-slate-400"
+          className="cursor-pointer rounded px-1.5 py-0.5 text-xs font-medium text-[var(--app-text-muted)] transition-colors hover:text-[var(--app-text)]"
         >
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 24 24"
-            className="size-4"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14" />
-          </svg>
+          {t('common.clear')}
         </button>
       </div>
 
-      <ul className="flex max-h-52 flex-col gap-2 overflow-y-auto">
+      <ul
+        data-scrollable="true"
+        className={`${DIVIDER_LIST} max-h-56 overflow-y-auto border-t border-[var(--app-border)]`}
+      >
         {entries.map((item) => {
           const savedPct =
             item.originalSize && item.originalSize > 0
@@ -59,26 +56,25 @@ export function RecentFilesCard({
               : null
 
           return (
-            <li
-              key={item.id}
-              className={`${SUBTLE_BOX} flex items-center justify-between gap-2 px-3 py-2`}
-            >
+            <li key={item.id} className="flex items-center justify-between gap-2 py-2.5">
               <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-semibold">{item.fileName}</p>
-                <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
+                <p className="truncate text-sm font-medium text-[var(--app-text)]">
+                  {item.fileName}
+                </p>
+                <p className="truncate text-xs tabular-nums text-[var(--app-text-muted)]">
                   {formatBytes(item.size)}
                   {savedPct !== null && ` (-${savedPct}%)`}
                 </p>
               </div>
 
-              <div className="flex shrink-0 items-center gap-1.5">
+              <div className="flex shrink-0 items-center gap-1">
                 {onOpen && (
                   <button
                     type="button"
                     onClick={() => onOpen(item)}
                     aria-label={`${t('common.view')} ${item.fileName}`}
                     title={t('common.view')}
-                    className="flex size-8 items-center justify-center rounded-xl border border-[var(--app-border)] active:scale-95"
+                    className={ICON_BUTTON}
                   >
                     <svg
                       aria-hidden="true"
@@ -86,7 +82,7 @@ export function RecentFilesCard({
                       className="size-4"
                       fill="none"
                       stroke="currentColor"
-                      strokeWidth="2"
+                      strokeWidth="1.9"
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     >
@@ -97,10 +93,10 @@ export function RecentFilesCard({
                 )}
                 <button
                   type="button"
-                  onClick={() => void downloadBlob(item.blob, item.fileName, outputLocationMode)}
+                  onClick={() => void handleDownload(item)}
                   aria-label={`${t('common.download')} ${item.fileName}`}
                   title={t('common.download')}
-                  className="flex size-8 items-center justify-center rounded-xl bg-emerald-600 text-white active:scale-95"
+                  className={ICON_BUTTON}
                 >
                   <svg
                     aria-hidden="true"
@@ -108,7 +104,7 @@ export function RecentFilesCard({
                     className="size-4"
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth="2.2"
+                    strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   >

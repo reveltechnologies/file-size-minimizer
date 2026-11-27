@@ -38,4 +38,24 @@ describe('buildVideoArgs', () => {
     expect(args).not.toContain('-fpsmax')
     expect(valueOf(args, '-movflags')).toBe('+faststart+use_metadata_tags')
   })
+
+  it('respects explicit video resolution and fps caps', () => {
+    const args = buildVideoArgs({
+      ...base,
+      options: { ...DEFAULT_OPTIONS, videoMaxHeight: 480, videoMaxFps: 15 },
+    })
+
+    expect(valueOf(args, '-vf')).toContain('min(480,')
+    expect(valueOf(args, '-fpsmax')).toBe('15')
+  })
+
+  it('keeps original resolution when videoMaxHeight is 0 even with smartOptimize', () => {
+    const args = buildVideoArgs({
+      ...base,
+      options: { ...DEFAULT_OPTIONS, smartOptimize: true, videoMaxHeight: 0, videoMaxFps: 0 },
+    })
+
+    expect(valueOf(args, '-vf')).toBe('scale=trunc(iw/2)*2:trunc(ih/2)*2')
+    expect(args).not.toContain('-fpsmax')
+  })
 })
