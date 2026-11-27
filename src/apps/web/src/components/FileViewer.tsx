@@ -3,8 +3,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { parseDelimited } from '../lib/csv'
 import type { HistoryEntry } from '../lib/historyStore'
 import { useI18n } from '../lib/i18n'
+import { isPdfMagicHeader } from '../lib/pdfViewer'
 import { downloadBlob } from '../lib/saveFile'
 import type { OutputLocationMode } from '../lib/settingsStore'
+import { PdfViewer } from './PdfViewer'
 import { RecentFilesCard } from './RecentFilesCard'
 import { ERROR_BOX, ICON_BUTTON, INPUT_CLASS } from './styles'
 
@@ -19,7 +21,6 @@ interface LoadedFileState {
   textContent: string
   truncated: boolean
   objectUrl: string | null
-  pdfInfo: { pageCount: number; title?: string; author?: string } | null
   hexDump: string
   loading: boolean
   error: string | null
@@ -134,7 +135,7 @@ function detectKind(file: File, sampleBytes: Uint8Array): ViewerKind {
   if (mime.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac'].includes(ext)) {
     return 'audio'
   }
-  if (mime === 'application/pdf' || ext === 'pdf') return 'pdf'
+  if (mime === 'application/pdf' || ext === 'pdf' || isPdfMagicHeader(sampleBytes)) return 'pdf'
 
   let nullCount = 0
   for (let i = 0; i < sampleBytes.length; i++) {
@@ -203,7 +204,6 @@ export function FileViewer({
       textContent: '',
       truncated: false,
       objectUrl: null,
-      pdfInfo: null,
       hexDump: '',
       loading: true,
       error: null,
@@ -218,7 +218,6 @@ export function FileViewer({
       const ext = getExtension(file.name)
 
       let objectUrl: string | null = null
-      let pdfInfo: LoadedFileState['pdfInfo'] = null
 
       if (kind === 'image') {
         if (ext === 'heic' || ext === 'heif' || file.type === 'image/heic' || file.type === 'image/heif') {
@@ -236,25 +235,13 @@ export function FileViewer({
         const fallbackMime = kind === 'video' ? 'video/mp4' : 'audio/mpeg'
         const safeMediaMime = file.type.startsWith(`${kind}/`) ? file.type : fallbackMime
         objectUrl = URL.createObjectURL(new Blob([file], { type: safeMediaMime }))
-      } else if (kind === 'pdf') {
-        objectUrl = URL.createObjectURL(new Blob([file], { type: 'application/pdf' }))
-        try {
-          const { PDFDocument } = await import('pdf-lib')
-          const fullBuf = await file.arrayBuffer()
-          const pdfDoc = await PDFDocument.load(fullBuf, { ignoreEncryption: true })
-          pdfInfo = {
-            pageCount: pdfDoc.getPageCount(),
-            title: pdfDoc.getTitle(),
-            author: pdfDoc.getAuthor(),
-          }
-        } catch {
-          // Ignore PDF metadata read errors.
-        }
       }
 
       const decoder = new TextDecoder('utf-8', { fatal: false })
       const textContent =
-        kind === 'image' || kind === 'video' || kind === 'audio' ? '' : decoder.decode(bytes)
+        kind === 'image' || kind === 'video' || kind === 'audio' || kind === 'pdf'
+          ? ''
+          : decoder.decode(bytes)
       const hexDump =
         kind === 'binary'
           ? formatHexDump(bytes.subarray(0, Math.min(bytes.length, MAX_HEX_PREVIEW_BYTES)))
@@ -266,7 +253,6 @@ export function FileViewer({
         textContent,
         truncated: file.size > MAX_TEXT_PREVIEW_BYTES,
         objectUrl,
-        pdfInfo,
         hexDump,
         loading: false,
         error: null,
@@ -278,7 +264,6 @@ export function FileViewer({
         textContent: '',
         truncated: false,
         objectUrl: null,
-        pdfInfo: null,
         hexDump: '',
         loading: false,
         error: err instanceof Error ? err.message : 'Read error',
@@ -514,23 +499,7 @@ export function FileViewer({
           <audio src={state.objectUrl} controls className="w-full" />
         </div>
       ) : state.kind === 'pdf' ? (
-        <div className="flex flex-1 flex-col gap-2">
-          {state.pdfInfo && (
-            <div className="flex items-center justify-between gap-2 text-xs text-[var(--app-text-muted)]">
-              <span className="tabular-nums">
-                {t('viewer.pages', { count: state.pdfInfo.pageCount })}
-              </span>
-              {state.pdfInfo.title && <span className="truncate">{state.pdfInfo.title}</span>}
-            </div>
-          )}
-          {state.objectUrl && (
-            <iframe
-              src={state.objectUrl}
-              title={state.file.name}
-              className="min-h-[54dvh] w-full flex-1 rounded-lg border border-[var(--app-border)] bg-white"
-            />
-          )}
-        </div>
+        <PdfViewer file={state.file} />
       ) : (
         <div className="flex min-h-0 flex-1 flex-col gap-2">
           <div className="flex items-center justify-between gap-1.5">

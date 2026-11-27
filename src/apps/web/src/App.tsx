@@ -54,6 +54,11 @@ import {
   openPlayStore,
   type UpdateInfo,
 } from './lib/updateCheck'
+import {
+  clampProgressWithRubberBand,
+  detectSwipeAxis,
+  resolveSwipeTargetIndex,
+} from './lib/swipeGesture'
 import { useShrinkEstimate } from './lib/useShrinkEstimate'
 import { useTransparency } from './lib/useTransparency'
 import { useVideoInfo } from './lib/useVideoInfo'
@@ -224,17 +229,21 @@ function App() {
   const visualProgressRef = useRef(1)
   const animFrameRef = useRef<number | null>(null)
   const suppressClickRef = useRef(false)
+  const suppressClickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const suppressBarClickRef = useRef(false)
   const barGestureRef = useRef<{
+    pointerId: number | null
     startX: number
     active: boolean
     moved: boolean
     progress: number
-  }>({ startX: 0, active: false, moved: false, progress: 1 })
+  }>({ pointerId: null, startX: 0, active: false, moved: false, progress: 1 })
   const dragDepthRef = useRef(0)
   const viewerReqRef = useRef(0)
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const gestureRef = useRef<{
+    pointerId: number | null
+    isTouch: boolean
     startX: number
     startY: number
     lastX: number
@@ -248,6 +257,8 @@ function App() {
     axis: 'none' | 'x' | 'y'
     scrollEl: HTMLElement | null
   }>({
+    pointerId: null,
+    isTouch: false,
     startX: 0,
     startY: 0,
     lastX: 0,
@@ -708,6 +719,136 @@ function App() {
     goToScene,
   ])
 
+  useEffect(() => {
+    const el = viewportRef.current
+    if (!el) return
+
+    const scheduleSuppressClick = () => {
+      suppressClickRef.current = true
+      if (suppressClickTimerRef.current) clearTimeout(suppressClickTimerRef.current)
+      suppressClickTimerRef.current = setTimeout(() => {
+        suppressClickRef.current = false
+        suppressClickTimerRef.current = null
+      }, 250)
+    }
+
+    const findTouch = (list: TouchList, id: number): Touch | null => {
+      for (let i = 0; i < list.length; i++) {
+        if (list[i].identifier === id) return list[i]
+      }
+      return null
+    }
+
+    const onTouchStart = (event: TouchEvent) => {
+      if (event.touches.length !== 1 || isInteractiveElement(event.target)) return
+      const touch = event.touches[0]
+      const now = performance.now()
+      const scrollEl =
+        event.target instanceof HTMLElement
+          ? (event.target.closest('[data-scene-pane]') as HTMLElement | null)
+          : null
+      gestureRef.current = {
+        pointerId: touch.identifier,
+        isTouch: true,
+        startX: touch.clientX,
+        startY: touch.clientY,
+        lastX: touch.clientX,
+        lastTime: now,
+        velocity: 0,
+        startProgress: visualProgressRef.current,
+        startScrollTop: scrollEl?.scrollTop ?? 0,
+        width: el.clientWidth || 1,
+        active: true,
+        captured: false,
+        axis: 'none',
+        scrollEl,
+      }
+    }
+
+    const onTouchMove = (event: TouchEvent) => {
+      const g = gestureRef.current
+      if (!g.active || !g.isTouch || g.pointerId === null) return
+      if (event.touches.length !== 1) return
+      const touch = findTouch(event.touches, g.pointerId)
+      if (!touch) return
+
+      const dx = touch.clientX - g.startX
+      const dy = touch.clientY - g.startY
+
+      if (g.axis === 'none') {
+        if (!event.cancelable) {
+          g.axis = 'y'
+          return
+        }
+        const axis = detectSwipeAxis(dx, dy)
+        if (axis === 'none') return
+        g.axis = axis
+        if (axis === 'y') return
+        cancelSettle()
+        g.lastX = touch.clientX
+        g.lastTime = performance.now()
+      }
+
+      if (g.axis === 'x') {
+        if (event.cancelable) event.preventDefault()
+        const now = performance.now()
+        const dt = now - g.lastTime
+        if (dt > 0) {
+          const instVel = (touch.clientX - g.lastX) / dt
+          g.velocity = g.velocity * 0.4 + instVel * 0.6
+          g.lastX = touch.clientX
+          g.lastTime = now
+        }
+        const rawProgress = g.startProgress - dx / Math.max(1, g.width)
+        applyVisualProgress(clampProgressWithRubberBand(rawProgress, SCENES.length))
+      }
+    }
+
+    const finishTouch = (event: TouchEvent, cancelled: boolean) => {
+      const g = gestureRef.current
+      if (!g.active || !g.isTouch || g.pointerId === null) return
+      const touch = findTouch(event.changedTouches, g.pointerId)
+      if (!touch) return
+
+      g.active = false
+      g.isTouch = false
+      g.pointerId = null
+
+      if (g.axis === 'x') {
+        const dx = touch.clientX - g.startX
+        if (Math.abs(dx) > 10) scheduleSuppressClick()
+        const targetIndex = resolveSwipeTargetIndex({
+          startProgress: g.startProgress,
+          currentProgress: visualProgressRef.current,
+          velocityPxPerMs: cancelled ? 0 : g.velocity,
+          idleMs: performance.now() - g.lastTime,
+          sceneCount: SCENES.length,
+        })
+        setScene(SCENES[targetIndex].id)
+        animateToIndex(targetIndex)
+      }
+    }
+
+    const onTouchEnd = (event: TouchEvent) => finishTouch(event, false)
+    const onTouchCancel = (event: TouchEvent) => finishTouch(event, true)
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    el.addEventListener('touchend', onTouchEnd, { passive: true })
+    el.addEventListener('touchcancel', onTouchCancel, { passive: true })
+
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove', onTouchMove)
+      el.removeEventListener('touchend', onTouchEnd)
+      el.removeEventListener('touchcancel', onTouchCancel)
+      if (suppressClickTimerRef.current) {
+        clearTimeout(suppressClickTimerRef.current)
+        suppressClickTimerRef.current = null
+      }
+    }
+  }, [applyVisualProgress, cancelSettle, animateToIndex])
+
   function computeBarProgress(clientX: number): number {
     const track = barTrackRef.current
     if (!track) return visualProgressRef.current
@@ -715,13 +856,6 @@ function App() {
     if (rect.width <= 0) return visualProgressRef.current
     const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
     return Math.max(0, Math.min(SCENES.length - 1, ratio * SCENES.length - 0.5))
-  }
-
-  function clampProgressWithRubberBand(rawProgress: number): number {
-    if (rawProgress < 0) return Math.max(-0.25, rawProgress * 0.25)
-    const max = SCENES.length - 1
-    if (rawProgress > max) return Math.min(max + 0.25, max + (rawProgress - max) * 0.25)
-    return rawProgress
   }
 
   const estimatePct =
@@ -798,13 +932,21 @@ function App() {
               event.preventDefault()
             }}
             onPointerDown={(event) => {
-              if (isInteractiveElement(event.target)) return
+              if (
+                event.pointerType === 'touch' ||
+                event.button !== 0 ||
+                isInteractiveElement(event.target)
+              ) {
+                return
+              }
               const now = performance.now()
               const scrollEl =
                 event.target instanceof HTMLElement
                   ? (event.target.closest('[data-scene-pane]') as HTMLElement | null)
                   : null
               gestureRef.current = {
+                pointerId: event.pointerId,
+                isTouch: false,
                 startX: event.clientX,
                 startY: event.clientY,
                 lastX: event.clientX,
@@ -820,14 +962,14 @@ function App() {
               }
             }}
             onPointerMove={(event) => {
+              if (event.pointerType === 'touch') return
               const g = gestureRef.current
-              if (!g.active) return
+              if (!g.active || g.isTouch || g.pointerId !== event.pointerId) return
               const dx = event.clientX - g.startX
               const dy = event.clientY - g.startY
               if (g.axis === 'none') {
-                if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
-                  g.axis = Math.abs(dx) > Math.abs(dy) * 1.15 ? 'x' : 'y'
-                }
+                const axis = detectSwipeAxis(dx, dy)
+                if (axis !== 'none') g.axis = axis
               }
               if (g.axis === 'x') {
                 if (!g.captured) {
@@ -846,58 +988,64 @@ function App() {
                   g.lastTime = now
                 }
                 const rawProgress = g.startProgress - dx / Math.max(1, g.width)
-                applyVisualProgress(clampProgressWithRubberBand(rawProgress))
+                applyVisualProgress(clampProgressWithRubberBand(rawProgress, SCENES.length))
               } else if (g.axis === 'y' && g.scrollEl && event.pointerType === 'mouse') {
                 g.scrollEl.scrollTop = g.startScrollTop - dy
               }
             }}
             onPointerUp={(event) => {
+              if (event.pointerType === 'touch') return
               const g = gestureRef.current
-              if (!g.active) return
+              if (!g.active || g.isTouch || g.pointerId !== event.pointerId) return
               g.active = false
+              g.pointerId = null
               if (g.axis === 'x') {
                 const dx = event.clientX - g.startX
-                const idleMs = performance.now() - g.lastTime
-                const effectiveVelocity = idleMs > 80 ? 0 : g.velocity
-                const currentProgress = visualProgressRef.current
-                let targetIndex: number
-                if (Math.abs(effectiveVelocity) > 0.4) {
-                  targetIndex = Math.round(g.startProgress) + (effectiveVelocity < 0 ? 1 : -1)
-                } else {
-                  targetIndex = Math.round(currentProgress)
-                }
-                targetIndex = Math.max(0, Math.min(SCENES.length - 1, targetIndex))
                 if (Math.abs(dx) > 10) {
                   suppressClickRef.current = true
-                  setTimeout(() => {
+                  if (suppressClickTimerRef.current) clearTimeout(suppressClickTimerRef.current)
+                  suppressClickTimerRef.current = setTimeout(() => {
                     suppressClickRef.current = false
+                    suppressClickTimerRef.current = null
                   }, 50)
                 }
+                const targetIndex = resolveSwipeTargetIndex({
+                  startProgress: g.startProgress,
+                  currentProgress: visualProgressRef.current,
+                  velocityPxPerMs: g.velocity,
+                  idleMs: performance.now() - g.lastTime,
+                  sceneCount: SCENES.length,
+                })
                 setScene(SCENES[targetIndex].id)
                 animateToIndex(targetIndex)
               }
             }}
-            onPointerCancel={() => {
+            onPointerCancel={(event) => {
+              if (event.pointerType === 'touch') return
               const g = gestureRef.current
-              if (!g.active) return
+              if (!g.active || g.isTouch || g.pointerId !== event.pointerId) return
               g.active = false
+              g.pointerId = null
               if (g.axis === 'x') {
-                const targetIndex = Math.max(
-                  0,
-                  Math.min(SCENES.length - 1, Math.round(visualProgressRef.current)),
-                )
+                const targetIndex = resolveSwipeTargetIndex({
+                  startProgress: g.startProgress,
+                  currentProgress: visualProgressRef.current,
+                  velocityPxPerMs: 0,
+                  idleMs: 0,
+                  sceneCount: SCENES.length,
+                })
                 setScene(SCENES[targetIndex].id)
                 animateToIndex(targetIndex)
               }
             }}
             style={{ touchAction: 'pan-y' }}
-            className="relative flex-1 overflow-hidden"
+            className="relative flex-1 overflow-hidden overscroll-x-none"
           >
             <main ref={trackRef} className="flex h-full w-full will-change-transform">
               <section
                 data-scene-pane="viewer"
                 aria-hidden={scene !== 'viewer'}
-                className="flex h-full w-full shrink-0 flex-col gap-4 overflow-y-auto px-4 py-4 pb-5 pl-[max(env(safe-area-inset-left),1rem)] pr-[max(env(safe-area-inset-right),1rem)]"
+                className="flex h-full w-full shrink-0 flex-col gap-4 overflow-y-auto overscroll-x-none px-4 py-4 pb-5 pl-[max(env(safe-area-inset-left),1rem)] pr-[max(env(safe-area-inset-right),1rem)]"
               >
                 <FileViewer
                   recentViewed={settings.rememberHistory ? viewedHistory : []}
@@ -916,7 +1064,7 @@ function App() {
               <section
                 data-scene-pane="shrink"
                 aria-hidden={scene !== 'shrink'}
-                className="flex h-full w-full shrink-0 flex-col gap-4 overflow-y-auto px-4 py-4 pb-5 pl-[max(env(safe-area-inset-left),1rem)] pr-[max(env(safe-area-inset-right),1rem)]"
+                className="flex h-full w-full shrink-0 flex-col gap-4 overflow-y-auto overscroll-x-none px-4 py-4 pb-5 pl-[max(env(safe-area-inset-left),1rem)] pr-[max(env(safe-area-inset-right),1rem)]"
               >
                 {error && (
                   <div role="alert" className={`${ERROR_BOX} flex flex-col gap-2`}>
@@ -1228,7 +1376,7 @@ function App() {
               <section
                 data-scene-pane="settings"
                 aria-hidden={scene !== 'settings'}
-                className="flex h-full w-full shrink-0 flex-col gap-4 overflow-y-auto px-4 py-4 pb-5 pl-[max(env(safe-area-inset-left),1rem)] pr-[max(env(safe-area-inset-right),1rem)]"
+                className="flex h-full w-full shrink-0 flex-col gap-4 overflow-y-auto overscroll-x-none px-4 py-4 pb-5 pl-[max(env(safe-area-inset-left),1rem)] pr-[max(env(safe-area-inset-right),1rem)]"
               >
                 <SettingsPanel
                   settings={settings}
@@ -1274,6 +1422,7 @@ function App() {
               }}
               onPointerDown={(event) => {
                 barGestureRef.current = {
+                  pointerId: event.pointerId,
                   startX: event.clientX,
                   active: true,
                   moved: false,
@@ -1282,7 +1431,7 @@ function App() {
               }}
               onPointerMove={(event) => {
                 const bg = barGestureRef.current
-                if (!bg.active) return
+                if (!bg.active || bg.pointerId !== event.pointerId) return
                 if (!bg.moved && Math.abs(event.clientX - bg.startX) > 6) {
                   bg.moved = true
                   cancelSettle()
@@ -1294,10 +1443,11 @@ function App() {
                   applyVisualProgress(nextProg)
                 }
               }}
-              onPointerUp={() => {
+              onPointerUp={(event) => {
                 const bg = barGestureRef.current
-                if (!bg.active) return
+                if (!bg.active || bg.pointerId !== event.pointerId) return
                 bg.active = false
+                bg.pointerId = null
                 if (bg.moved) {
                   const targetIdx = Math.max(
                     0,
@@ -1311,10 +1461,11 @@ function App() {
                   animateToIndex(targetIdx)
                 }
               }}
-              onPointerCancel={() => {
+              onPointerCancel={(event) => {
                 const bg = barGestureRef.current
-                if (!bg.active) return
+                if (!bg.active || bg.pointerId !== event.pointerId) return
                 bg.active = false
+                bg.pointerId = null
                 if (bg.moved) {
                   const targetIdx = Math.max(
                     0,

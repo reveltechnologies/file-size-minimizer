@@ -1,7 +1,7 @@
 import { Capacitor, registerPlugin } from '@capacitor/core'
 
 export const APP_VERSION: string =
-  typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '1.1.0'
+  typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '1.2.0'
 
 export const PLAY_STORE_URL =
   'https://play.google.com/store/apps/details?id=com.reveltechnologies.filesizeminimizer'

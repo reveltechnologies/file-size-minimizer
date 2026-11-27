@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-11-27
+
+### Added
+- Offline built-in PDF viewer powered by `pdfjs-dist` with lazy page canvas rendering, page indicator (`currentPage / totalPages`), document title display, and zoom controls (`−`, reset `%`, `+`) localized in English and Turkish.
+
+### Changed
+- Bumped release version to `1.2.0` (`versionCode 6`).
+
+### Fixed
+- Fixed the PDF viewer showing a blank white screen on Android WebView, mobile browsers, and extension-disabled desktop windows by rendering PDFs directly to `<canvas>` instead of relying on `<iframe src="blob:...">`.
+- Fixed mobile touch swipe dragging canceling after a few frames and snapping back to the starting page by handling single-touch horizontal drags with non-passive `touchmove` listeners, symmetric axis locking, and a 30% distance commit threshold.
+
 ## [1.1.1-pre.1] - 2026-11-27
 
 ### Changed
