@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1-pre.1] - 2026-11-27
+
+### Changed
+- Changed the Android app launcher icon background from dark `#051810` to `#FFFFFF` across adaptive icons, legacy square/round mipmaps, and the 512×512 store icon while keeping the launch splash screen background matched to `#18191C`.
+
 ## [1.1.0] - 2026-11-27
 
 ### Added
